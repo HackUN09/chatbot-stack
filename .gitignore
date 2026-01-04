@@ -1,0 +1,30 @@
+# --- SECRETS ---
+.env
+
+# --- DOCKER DATA & PERSISTENCE ---
+persistence/
+db_core_data/
+cache_core_data/
+minio_data/
+chatwoot_data/
+apps_data/
+node_modules/
+
+# --- BACKUPS & SNAPSHOTS ---
+ops/backups/*.sql
+ops/backups/snapshots/*.zip
+
+# --- LOGS & DIAGNOSTICS ---
+*.log
+*.txt
+ops/docs/ULTIMATE_AUDIT.md
+
+# --- OS & IDE ---
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
+
+# --- PYTHON ---
+__pycache__/
+*.py[cod]
