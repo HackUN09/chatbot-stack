@@ -112,6 +112,47 @@ def fix_db_permissions(env, silent=False):
     
     if not silent: print("   ✅ Mantenimiento DB finalizado.")
 
+def sync_chatwoot_integration(env, instance_name, silent=False):
+    token = env.get("CHATWOOT_GLOBAL_TOKEN")
+    account_id = env.get("CHATWOOT_GLOBAL_ACCOUNT_ID")
+    domain = env.get("DOMAIN")
+    api_key = env.get("EVOLUTION_API_KEY")
+    port = env.get("EVOLUTION_PORT") or "8080"
+    
+    if not token or not account_id or not domain:
+        return
+
+    chat_url = f"https://chat.{domain}"
+    
+    config = {
+        "enabled": True,
+        "accountId": account_id,
+        "token": token,
+        "url": chat_url,
+        "webhook_url": True,
+        "importContacts": True,
+        "importMessages": True,
+        "reopenConversation": True,
+        "conversationPending": False
+    }
+    
+    try:
+        payload = json.dumps(config).replace('"', '\\"')
+        cmd = [
+            "docker", "exec", EVOLUTION_CONTAINER, 
+            "curl", "-s", "-X", "POST", 
+            "-H", f"apikey: {api_key}",
+            "-H", "Content-Type: application/json",
+            "-d", f'"{payload}"',
+            f"http://localhost:{port}/chatwoot/set/{instance_name}"
+        ]
+        # We use a slightly different approach for the JSON payload in docker exec
+        shell_cmd = f'docker exec {EVOLUTION_CONTAINER} curl -s -X POST -H "apikey: {api_key}" -H "Content-Type: application/json" -d "{payload}" http://localhost:{port}/chatwoot/set/{instance_name}'
+        subprocess.run(shell_cmd, shell=True, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if not silent: print(f"      🔗 Link Chatwoot OK: [{instance_name}] -> ID:{account_id}")
+    except Exception as e:
+        if not silent: print(f"      ❌ Error vinculando Chatwoot: {e}")
+
 def verify_and_heal_evolution(env, force_heal=False, silent=False):
     if not silent: print("\n🔬 [4/5] Escaneo Quirúrgico de Instancias Evolution API...")
     api_key = env.get("EVOLUTION_API_KEY")
@@ -139,6 +180,10 @@ def verify_and_heal_evolution(env, force_heal=False, silent=False):
                         purge_cmd = ["docker", "exec", EVOLUTION_CONTAINER, "rm", "-rf", f"/evolution/instances/{name}"]
                         subprocess.run(purge_cmd, check=False)
                         if not silent: print(f"      ✅ Instancia '{name}' restaurada a estado virgen.")
+                    
+                    # Sincronización Automática Chatwoot (v9.0)
+                    sync_chatwoot_integration(env, name, silent)
+                    
             except:
                 if not silent: print(f"   ⚠️ Respuesta de API inválida.")
         else:
@@ -177,7 +222,7 @@ def main():
     args = parser.parse_args()
 
     if not args.silent:
-        print("⚕️  SENTINEL FIXER v5.0 [GOD MODE]: Curación Autónoma en Proceso...")
+        print("⚕️  SENTINEL FIXER v6.0 [SUPER-LINK]: Curación y Vinculación Autónoma...")
     
     sanitize_env(args.silent)
     clean_stale_pids(args.silent)

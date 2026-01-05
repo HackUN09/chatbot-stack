@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#  ISEKAI STACK - SISTEMA MAESTRO v8.0 (SENTINEL OS - GENESIS EDITION)
+#  ISEKAI STACK - SISTEMA MAESTRO v9.0 (SENTINEL OS - SUPER-LINK EDITION)
 #  "Zero-Touch: El sistema que domina su propia integridad"
 
 # --- PALETA DE COLORES (THE MATRIX & CYBERPUNK) ---
@@ -26,7 +26,7 @@ function print_matrix_header() {
     echo "   ██║╚██╔╝██║██╔══██║   ██║   ██╔══██╗██║ ██╔██╗ "
     echo "   ██║ ╚═╝ ██║██║  ██║   ██║   ██║  ██║██║██╔╝ ██╗"
     echo "   ╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝"
-    echo -e "   ${C_CYAN}─── SENTINEL OS // GENESIS EDITION v8.0 // HYPER-AUTOHEAL ───${NC}"
+    echo -e "   ${C_CYAN}─── SENTINEL OS // GENESIS EDITION v9.0 // SUPER-LINK ───${NC}"
     echo -e "   ${M_DARK}═════════════════════════════════════════════════${NC}"
 }
 
@@ -107,7 +107,11 @@ function start_sequence() {
     
     check_item "Chatwoot & n8n (Interconectividad)" "OK" "⚡"
 
-    # 4. Puerta de Enlace
+    # 4. Sincronización Chatwoot <> Evolution (v9.0)
+    python ops/scripts/sentinel_fixer.py --silent
+    check_item "Vinculación Chatwoot-Evolution" "OK" "🔗"
+
+    # 5. Puerta de Enlace
     docker compose -f modules/03-tunnel/docker-compose.yml --env-file .env up -d > /dev/null 2>&1
     check_item "Túnel Cloudflare (Acceso Global)" "OK" "🌐"
 
