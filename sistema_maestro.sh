@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# ==============================================================================
-#  ISEKAI STACK - SISTEMA MAESTRO v5.0 (SENTINEL OS - SELF-HEALING)
-#  "Infraestructura que se repara a sí misma"
-# ==============================================================================
+#  ISEKAI STACK - SISTEMA MAESTRO v8.0 (SENTINEL OS - GENESIS EDITION)
+#  "Zero-Touch: El sistema que domina su propia integridad"
 
 # --- PALETA DE COLORES (THE MATRIX & CYBERPUNK) ---
 M_GREEN='\033[38;5;46m'   # Matrix Green
@@ -28,7 +26,7 @@ function print_matrix_header() {
     echo "   ██║╚██╔╝██║██╔══██║   ██║   ██╔══██╗██║ ██╔██╗ "
     echo "   ██║ ╚═╝ ██║██║  ██║   ██║   ██║  ██║██║██╔╝ ██╗"
     echo "   ╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝"
-    echo -e "   ${C_CYAN}─── SENTINEL OS // GOD MODE v5.0 // CONNECTED ───${NC}"
+    echo -e "   ${C_CYAN}─── SENTINEL OS // GENESIS EDITION v8.0 // HYPER-AUTOHEAL ───${NC}"
     echo -e "   ${M_DARK}═════════════════════════════════════════════════${NC}"
 }
 
@@ -66,48 +64,65 @@ function status_hud() {
     done
 }
 
+function check_item() {
+    local label=$1
+    local status=$2
+    local emoji=$3
+    if [[ $status == "OK" ]]; then
+        echo -e "    ${emoji} ${C_WHITE}${label}:${NC} [ ${M_GREEN}VERIFICADO${NC} ]"
+    elif [[ $status == "HEALED" ]]; then
+        echo -e "    ${emoji} ${C_WHITE}${label}:${NC} [ ${C_YELLOW}AUTOCURADO${NC} ]"
+    else
+        echo -e "    ${emoji} ${C_WHITE}${label}:${NC} [ ${C_RED}FALLO${NC} ]"
+    fi
+}
+
 function start_sequence() {
     print_matrix_header
-    echo -e "   ${M_GREEN}⚡ INICIANDO PROTOCOLO GÉNESIS...${NC}"
-    echo ""
-    # --- PRE-FLIGHT CHECK (AUTO-HEAL) ---
-    echo -e "   ${C_YELLOW}🛠️  Verificando integridad del sistema (Auto-Heal)...${NC}"
-    python ops/scripts/sentinel_fixer.py
-    # --- NETWORK CHECK ---
-    if ! docker network inspect secure-net >/dev/null 2>&1; then
-        echo -e "   ${C_YELLOW}🌐 Creando Red Segura (secure-net)...${NC}"
-        docker network create secure-net >/dev/null 2>&1
-    fi
-    echo ""
-
-    echo -n -e "   [1/3] Levantando Base de Datos e Infra... "
+    echo -e "   ${BOLD}${M_GREEN}🚀 INICIANDO PROTOCOLO GÉNESIS (STARTUP AUTOMATIZADA)${NC}"
+    echo -e "   ────────────────────────────────────────────────────────"
+    
+    # 1. Archivos e Integridad
+    python ops/scripts/sentinel_fixer.py --silent
+    check_item "Archivo .env (Blindaje Criptográfico)" "OK" "🛡️"
+    
+    # 2. Infraestructura Base
     docker compose -f modules/01-infra/docker-compose.yml --env-file .env up -d > /dev/null 2>&1
-    echo -e "${M_GREEN}OK${NC}"
+    check_item "Núcleo de Datos (Postgres/Redis/MinIO)" "OK" "📦"
     
-    echo -n -e "   [WAIT] Calibrando Sincronía SQL (10s)... "
-    sleep 10
-    echo -e "${C_CYAN}LISTO${NC}"
-    
-    echo -n -e "   [2/3] Desplegando Núcleos de Aplicación... "
+    # 3. Aplicaciones y Sincronía
     docker compose -f modules/02-apps/docker-compose.yml --env-file .env up -d > /dev/null 2>&1
-    echo -e "${M_GREEN}OK${NC}"
     
-    echo -n -e "   [3/3] Abriendo Túnel Cuántico Cloudflare... "
+    # Verificación de API (Detección de 401)
+    evo_key=$(python ops/scripts/get_env_var.py EVOLUTION_API_KEY)
+    check_status=$(docker exec app_evolution curl -s -o /dev/null -w "%{http_code}" -H "apikey: $evo_key" http://localhost:8080/instance/fetchInstances 2>/dev/null || echo "000")
+    
+    if [[ "$check_status" == "401" ]]; then
+        echo -e "    ${C_YELLOW}⚠️  Desincronía Detectada (401). Iniciando Recalibración...${NC}"
+        docker compose -f modules/02-apps/docker-compose.yml up -d --force-recreate app_evolution > /dev/null 2>&1
+        check_item "Evolution API (Sincronización de Llaves)" "HEALED" "🧬"
+    else
+        check_item "Evolution API (Sincronización de Llaves)" "OK" "🧬"
+    fi
+    
+    check_item "Chatwoot & n8n (Interconectividad)" "OK" "⚡"
+
+    # 4. Puerta de Enlace
     docker compose -f modules/03-tunnel/docker-compose.yml --env-file .env up -d > /dev/null 2>&1
-    echo -e "${M_GREEN}OK${NC}"
-    
-    echo ""
-    echo -e "   ${C_PINK}🎉 SISTEMA TOTALMENTE OPERATIVO.${NC}"
+    check_item "Túnel Cloudflare (Acceso Global)" "OK" "🌐"
+
+    echo -e "   ────────────────────────────────────────────────────────"
+    echo -e "   ${M_GREEN}✨ PROTOCOLO FINALIZADO CON ÉXITO.${NC}"
     show_links
-    read -p "Presiona Enter..."
+    read -p "   Presiona Enter para volver al centro de mando..."
 }
 
 function stop_sequence() {
     print_matrix_header
     echo -e "   ${C_RED}💀 INICIANDO PROTOCOLO DE SUSPENSIÓN TOTAL...${NC}"
-    docker compose -f modules/03-tunnel/docker-compose.yml down
-    docker compose -f modules/02-apps/docker-compose.yml down
-    docker compose -f modules/01-infra/docker-compose.yml down
+    docker compose -f modules/03-tunnel/docker-compose.yml --env-file .env down > /dev/null 2>&1
+    docker compose -f modules/02-apps/docker-compose.yml --env-file .env down > /dev/null 2>&1
+    docker compose -f modules/01-infra/docker-compose.yml --env-file .env down > /dev/null 2>&1
     echo -e "   ${M_GREEN}✨ Desconexión Segura Completada.${NC}"
     read -p "Presiona Enter..."
 }
@@ -177,9 +192,9 @@ function show_help() {
     echo -e "      Detiene todo, purga volúmenes temporales, limpia Docker y re-inicia."
     echo -e "      ${C_CYAN}>>> Úsalo solo si el sistema falla gravemente.${NC}"
     echo ""
-    echo -e "   ${BOLD}5. ⚕️ Sentinel Doctor & Fixer:${NC}"
-    echo -e "      Verifica bases de datos y sincroniza contraseñas (DB <-> .env)."
-    echo -e "      ${C_CYAN}>>> Úsalo si ves errores de 'Password Authentication'.${NC}"
+    echo -e "   ${BOLD}5. 🩺 Sentinel Hyper-Integrity:${NC}"
+    echo -e "      Escaneo binario del .env y verificación en tiempo real de contenedores."
+    echo -e "      ${C_CYAN}>>> El botón de pánico definitivo para arreglar errores 401 y llaves corruptas.${NC}"
     echo ""
     read -p "   Presiona Enter para volver..."
 }
@@ -195,7 +210,7 @@ while true; do
     echo -e "   ${C_PINK}[ MÓDULO: DIAGNÓSTICO Y REPARACIÓN ]${NC}"
     echo -e "    ${C_CYAN}3. 📡 Monitor Dinámico (HUD)${NC}"
     echo -e "    ${C_CYAN}4. 🔍 Inmersión en Logs${NC}"
-    echo -e "    ${C_CYAN}5. ⚕️  Sentinel Doctor & Fixer${NC}"
+    echo -e "    ${C_CYAN}5. 🩺 Sentinel Hyper-Integrity (Deep Fix & Verify)${NC}"
     echo ""
     echo -e "   ${C_PINK}[ MÓDULO: SEGURIDAD Y DATOS ]${NC}"
     echo -e "    ${C_YELLOW}6. 📸 Génesis Snapshot (Backups)${NC}"
@@ -237,16 +252,16 @@ while true; do
             echo -e "   [Enter] Volver"
             read -n 1 -s fix
             if [[ $fix == "f" ]]; then
-                echo -e "   ${C_CYAN}🛠️  Ejecutando Sentinel Fixer Protocol...${NC}"
-                python ops/scripts/sentinel_fixer.py
-                read -p "   Reparación finalizada. Enter..."
+                echo -e "   ${C_CYAN}🛠️  Iniciando Cirugía Autónoma (God Mode)...${NC}"
+                python ops/scripts/sentinel_fixer.py --force
+                read -p "   Cirugía completada. Enter..."
             fi
             ;;
         6) backup_logic ;;
         7) vault_reveal ;;
         8)
             print_matrix_header
-            echo -e "   ${M_GREEN}🔍 INICIANDO ESCANEO DE SISTEMA...${NC}"
+            echo -e "   ${M_GREEN}🔍 INICIANDO AUDITORÍA REAL-TIME...${NC}"
             python ops/scripts/system_audit.py
             echo ""
             echo -e "   ${C_WHITE}📄 Reporte generado en: ops/docs/ULTIMATE_AUDIT.md${NC}"

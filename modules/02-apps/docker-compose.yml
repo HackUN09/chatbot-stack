@@ -28,6 +28,7 @@ services:
       S3_FORCE_PATH_STYLE: "true"
       RAILS_SERVE_STATIC_FILES: "true"
       RAILS_LOG_TO_STDOUT: "true"
+      RACK_TIMEOUT_SERVICE_TIMEOUT: 0
     command: bundle exec rails s -p 3000 -b 0.0.0.0
     volumes:
       - chatwoot_data:/app/storage
@@ -71,13 +72,15 @@ services:
   # EVOLUTION API
   # ==========================================
   app_evolution:
-    image: atendai/evolution-api:v2.1.1
+    image: atendai/evolution-api:v2.3.7
     container_name: app_evolution
     restart: always
     env_file: ../../.env
     environment:
       SERVER_URL: https://api.${DOMAIN}
       AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY}
+      AUTHENTICATION_TYPE: apikey
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
       DATABASE_ENABLED: "true"
       DATABASE_PROVIDER: postgresql
       DATABASE_CONNECTION_URI: postgresql://evolution_user:${EVOLUTION_DB_PASSWORD}@db_core:5432/evolution?schema=public
@@ -90,6 +93,16 @@ services:
       S3_PORT: 9000
       S3_ENDPOINT: core_minio
       S3_USE_SSL: "false"
+      CORS_ORIGIN: "*"
+      # Manager Auto-Login
+      VITE_EVOLUTION_API_URL: https://api.${DOMAIN}
+      VITE_EVOLUTION_API_KEY: ${EVOLUTION_API_KEY}
+      # Chatwoot Integration
+      CHATWOOT_ENABLED: "true"
+      CHATWOOT_MESSAGE_REOPEN: "true"
+      CHATWOOT_MESSAGE_WA_INDICATOR: "true"
+      CHATWOOT_IMPORT_CONTACTS: "true"
+      CHATWOOT_IMPORT_MESSAGES: "true"
     volumes:
       - ../../persistence/evolution/instances:/evolution/instances
       - ../../persistence/evolution/store:/evolution/store
@@ -102,6 +115,12 @@ services:
         limits:
           cpus: '1.0'
           memory: 1G
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # ==========================================
   # N8N
