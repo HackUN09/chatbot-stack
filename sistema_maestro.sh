@@ -73,6 +73,11 @@ function start_sequence() {
     # --- PRE-FLIGHT CHECK (AUTO-HEAL) ---
     echo -e "   ${C_YELLOW}🛠️  Verificando integridad del sistema (Auto-Heal)...${NC}"
     python ops/scripts/sentinel_fixer.py
+    # --- NETWORK CHECK ---
+    if ! docker network inspect secure-net >/dev/null 2>&1; then
+        echo -e "   ${C_YELLOW}🌐 Creando Red Segura (secure-net)...${NC}"
+        docker network create secure-net >/dev/null 2>&1
+    fi
     echo ""
 
     echo -n -e "   [1/3] Levantando Base de Datos e Infra... "
@@ -132,14 +137,28 @@ function backup_logic() {
 
 function vault_reveal() {
     print_matrix_header
-    echo -e "   ${C_PINK}🔐 ACCESO A LA BOVEDA SEGURA${NC}"
-    echo -e "   ──────────────────────────────────────"
-    echo -e "   User Admin: ${C_WHITE}$(python ops/scripts/get_env_var.py PGADMIN_DEFAULT_EMAIL)${NC}"
-    echo -e "   Pass Admin: ${C_WHITE}$(python ops/scripts/get_env_var.py PGADMIN_DEFAULT_PASSWORD)${NC}"
-    echo -e "   Evolution API Key: ${M_GREEN}$(python ops/scripts/get_env_var.py EVOLUTION_API_KEY)${NC}"
+    echo -e "   ${C_PINK}🔐 BOVEDA DE CREDENCIALES (NIVEL 0)${NC}"
+    echo -e "   ────────────────────────────────────────────────"
+    
+    echo -e "   ${BOLD}${C_CYAN}1. INFRAESTRUCTURA CORE:${NC}"
+    echo -e "      🐘 Postgres Root:  ${M_GREEN}$(python ops/scripts/get_env_var.py POSTGRES_ROOT_PASSWORD)${NC}"
+    echo -e "      🧠 Redis Pass:     ${M_GREEN}$(python ops/scripts/get_env_var.py REDIS_PASSWORD)${NC}"
+    echo -e "      📦 MinIO Root:     ${M_GREEN}$(python ops/scripts/get_env_var.py MINIO_ROOT_PASSWORD)${NC}"
     echo ""
-    echo -e "   ${M_DARK}Tus secretos están encriptados en el .env${NC}"
-    read -p "Presiona Enter para cerrar."
+
+    echo -e "   ${BOLD}${C_CYAN}2. APLICACIONES:${NC}"
+    echo -e "      🧬 Evolution API:  ${C_YELLOW}$(python ops/scripts/get_env_var.py EVOLUTION_API_KEY)${NC}"
+    echo -e "      💬 Chatwoot DB:    ${M_GREEN}$(python ops/scripts/get_env_var.py CHATWOOT_DB_PASSWORD)${NC}"
+    echo -e "      ⚡ n8n Encryption: ${M_GREEN}$(python ops/scripts/get_env_var.py N8N_ENCRYPTION_KEY)${NC}"
+    echo ""
+
+    echo -e "   ${BOLD}${C_CYAN}3. ACCESO ADMIN:${NC}"
+    echo -e "      👤 Admin Email:    ${C_WHITE}$(python ops/scripts/get_env_var.py PGADMIN_DEFAULT_EMAIL)${NC}"
+    echo -e "      🔑 Admin Pass:     ${C_WHITE}$(python ops/scripts/get_env_var.py PGADMIN_DEFAULT_PASSWORD)${NC}"
+    
+    echo -e "   ────────────────────────────────────────────────"
+    echo -e "   ${M_DARK}>> Copia y pega estas claves donde se requieran.${NC}"
+    read -p "   Presiona Enter para cerrar."
 }
 
 function show_help() {
