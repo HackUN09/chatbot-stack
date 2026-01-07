@@ -3,6 +3,8 @@
 .env
 ops/config/envs/*.env
 !ops/config/envs/.env.example
+!.env.example
+.env.bak
 
 
 # --- DOCKER DATA & PERSISTENCE ---
