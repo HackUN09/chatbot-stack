@@ -26,6 +26,7 @@
 *   **Chatwoot (Super-Linked)**: Plataforma de soporte omnicanal, provisionada automáticamente.
 *   **n8n**: Motor de automatización de flujos para lógica de IA.
 *   **Postgres & Redis**: Capa de persistencia y caché de alto rendimiento.
+*   **MinIO**: Almacenamiento de objectos S3 compatible (Media & Backups).
 *   **Cloudflare Tunnel**: Acceso global seguro, sin configuraciones complejas.
 
 ---
