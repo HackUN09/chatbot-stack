@@ -1,80 +1,157 @@
-# 🛡️ Sentinel OS: Isekai Hardened Stack v8.0
 
-> **Genesis Edition // The Ultimate Autonomous Infrastructure.** 
-> Una arquitectura blindada, autorreparable y diseñada para la dominación digital.
+<div align="center">
 
-[![Project Status: Operational](https://img.shields.io/badge/Status-Operational-brightgreen.svg)]()
-[![Version: 8.0](https://img.shields.io/badge/Version-8.0-blue.svg)]()
+# ⛩️ ISEKAI STACK (SENTINEL OS)
+### Enterprise AI Chatbot Infrastructure v11.0 [GOLD MASTER]
 
----
+[![Status](https://img.shields.io/badge/Status-Operational-success?style=for-the-badge&logo=statuspage)]()
+[![System](https://img.shields.io/badge/System-Sentinel_OS-blueviolet?style=for-the-badge&logo=linux)]()
+[![Docker](https://img.shields.io/badge/Container-Docker_Compose-2496ED?style=for-the-badge&logo=docker)]()
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)]()
 
-## 🌟 Visión General
-Sentinel OS no es solo un conjunto de contenedores; es un ecosistema autogestionado para el despliegue de Chatbots, automatización masiva y atención omnicanal. Diseñado bajo los principios de **Hyper-Intergrity**, asegura que tu infraestructura esté siempre en línea, reparándose a sí misma ante fallos de sincronización o corrupción de datos.
+*The "Zero-Touch" Infrastructure for Evolution API, Chatwoot, and n8n.*
 
-### 🛠️ Ecosistema Core
-- **💬 Chatwoot**: Atención al cliente omnicanal de nivel empresarial.
-- **🧬 Evolution API v2**: Pasarela multicanal avanzada (WhatsApp, etc.).
-- **⚡ n8n**: Orquestador de flujos de trabajo inteligentes.
-- **🐘 PostgreSQL 15**: Motor de datos blindado con segregación de usuarios.
-- **🧠 Redis 7**: Capa de caché ultrarrápida con seguridad activa.
-- **📦 MinIO**: Almacenamiento de objetos compatible con S3 para multimedia.
-- **🌉 Cloudflare Tunnel**: Acceso global Zero-Trust sin exposición de puertos.
+[🚀 Quick Start](#-quick-start) • [🏗 Architecture](#-architecture) • [🔧 Configuration](#-configuration) • [🩺 Diagnostics](#-diagnostics-sentinel-hud)
+
+</div>
 
 ---
 
-## 🦾 Características "Genesis Edition v8.0"
-- **🎨 UI Cyberpunk/Matrix**: Una consola de mando gamificada para la gestión total.
-- **🩺 Protocolo Génesis**: Checklist visual en tiempo real que verifica e higieniza el sistema en cada arranque.
-- **⚕️ God Mode (Auto-Healing)**: 
-    - Reparación automática de errores 401 (Unauthorized).
-    - Sanitización agresiva de `.env` (Zero characters invisibles).
-    - Purga inteligente de sesiones corruptas.
-- **📸 Génesis Snapshot**: Sistema de respaldos instantáneos de todo el stack.
-- **🔐 Vault & Audit**: Registro en tiempo real de secretos y salud del sistema.
+## 📖 Overview
+
+**Isekai Stack** is a production-ready, highly automated infrastructure designed to deploy and manage a complete conversational AI ecosystem. Built with a "Zero-Touch" philosophy, it includes self-healing capabilities, automated integrity checks, and a gamified command center known as **Sentinel OS**.
+
+### 🧩 Core Components
+*   **Evolution API v2**: The heart of WhatsApp connectivity.
+*   **Chatwoot (Super-Linked)**: Omnichannel customer support platform, automatically provisioned.
+*   **n8n**: Workflow automation engine for AI logic.
+*   **Postgres & Redis**: High-performance persistence and caching layer.
+*   **Cloudflare Tunnel**: Secure, zero-config global access.
 
 ---
 
-## 🚀 Despliegue Rápido (Zero-Touch)
+## 🏗 Architecture
 
-### 1. Requisitos
-- Docker & Docker Compose.
-- Git & Python 3.9+.
-
-### 2. Instalación
-```bash
-git clone https://github.com/HackUN09/chatbot-stack.git
-cd chatbot-stack
-cp .env.example .env
-# Configura tus dominios y llaves en el .env
+```mermaid
+graph TD
+    user((User / WA)) -->|HTTPS| cloudflare[Cloudflare Tunnel]
+    cloudflare -->|Secure Net| nginx[Reverse Proxy / Apps]
+    
+    subgraph "Isekai Stack (Docker)"
+        evolution[Evolution API]
+        chatwoot[Chatwoot Web/Worker]
+        n8n[n8n Automation]
+        
+        sentinel[🛡️ Sentinel OS Monitor]
+        
+        db[(Postgres Core)]
+        redis[(Redis Cache)]
+        minio[(MinIO Storage)]
+        
+        evolution <-->|Auto-Link| chatwoot
+        evolution -->|Events| n8n
+        sentinel -->|Heals| evolution
+        
+        chatwoot --> db & redis & minio
+        evolution --> db & redis & minio
+        n8n --> db
+    end
 ```
 
-### 3. Lanzamiento Maestro
-```bash
-chmod +x sistema_maestro.sh
-./sistema_maestro.sh
-```
-*Selecciona la **Opción 1** para activar el Protocolo Génesis.*
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+*   Docker & Docker Compose
+*   Python 3.9+
+*   Git
+
+### Installation (Zero-Touch)
+
+1.  **Clone the Repository**
+    ```bash
+    git clone https://github.com/HackUN09/chatbot-stack.git
+    cd chatbot-stack
+    ```
+
+2.  **Configure Environment**
+    Copy the template and fill in your secrets.
+    ```bash
+    cp ops/config/envs/.env.example .env
+    # Edit .env with your domains and passwords
+    ```
+
+3.  **Launch Sentinel OS**
+    The system includes a Master Script that handles everything.
+    ```bash
+    ./sistema_maestro.sh
+    ```
+    *Select **Option 1 (Lanzar Sistema Completo)**.*
 
 ---
 
-## 🏗️ Estructura del Proyecto (Genesis Architecture)
+## 🔧 Configuration
+
+The configuration is modularized for better maintainability:
+
+| File | Location | Purpose |
+| :--- | :--- | :--- |
+| **`.env`** | `root` | **Master Configuration**. Controls all passwords, domains, and global keys. |
+| `internal_evo.env` | `ops/config/envs/` | Advanced settings for Evolution API. |
+| `internal_cw.env` | `ops/config/envs/` | Reference config for Chatwoot. |
+| `internal_n8n.env` | `ops/config/envs/` | Reference config for n8n. |
+
+---
+
+## 🩺 Diagnostics (Sentinel HUD)
+
+Sentinel OS includes a real-time HUD (Heads-Up Display) for system management.
+
+![Sentinel HUD](https://via.placeholder.com/800x400?text=Sentinel+OS+Dashboard+Preview)
+
+### Key Features
+*   **Auto-Healing**: Automatically detects and fixes 401 Unauthorized errors in Evolution API (`sentinel_fixer.py`).
+*   **Smart Provisioning**: Creating an Evolution instance automatically configures the inbox in Chatwoot using internal API calls.
+*   **Vault**: A secure view of your generated credentials.
+*   **Genesis Snapshot**: One-click backups of code and database dumps.
+
+### Useful Commands
+
+```bash
+# Verify System Integrity
+python ops/scripts/sentinel_fixer.py --silent
+
+# Reconstruct corrupted .env
+python ops/scripts/env_reconstructor.py
+```
+
+---
+
+## 📂 Project Structure
+
 ```text
-├── modules/           # Capas de Orquestación (01-Infra, 02-Apps, 03-Tunnel)
-├── persistence/       # Datos persistentes de todos los servicios
-├── ops/               # Operaciones
-│   ├── scripts/       # El cerebro de reparación (Sentinel Fixer, Audit)
-│   ├── backups/       # Snapshots y volcados SQL
-│   └── docs/          # Documentación técnica profunda
-└── sistema_maestro.sh # El orquestador interactivo
+/
+├── .env                  # Master Secrets (GitIgnored)
+├── sistema_maestro.sh    # Sentinel OS Controller
+├── modules/              # Docker Compose Definitions
+│   ├── 01-infra/        # Databases & Storage
+│   ├── 02-apps/         # Main Applications
+│   └── 03-tunnel/       # Networking
+└── ops/                  # Operations Center
+    ├── config/envs/     # Configuration Templates
+    ├── scripts/         # Python Automation Scripts
+    └── docs/            # Detailed Documentation
 ```
 
 ---
 
-## 📜 Documentación Detallada
-Para comprender el corazón de la bestia, consulta nuestra documentación extendida:
-- [📖 Guía del Sistema Sentinel OS](ops/docs/SYSTEM_GUIDE.md) - Cómo funciona todo por dentro.
-- [📑 Reporte de Auditoría](ops/docs/ULTIMATE_AUDIT.md) - Estado de salud en tiempo real.
-- [🛡️ Guía de Configuración Blindada](ops/docs/CONFIG_GUIDE.md) - Mejores prácticas de seguridad.
+## 👤 Author
+
+**HackUN09**
+*   Email: wamr1991.1@gmail.com
+*   Role: Systems Architect & Sentinel OS Developer
 
 ---
-*Desarrollado con ❤️ por **HackUN09 & Antigravity**.*
+
+*Verified by Sentinel Hyper-Integrity Protocol v11.0*

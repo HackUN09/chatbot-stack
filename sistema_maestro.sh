@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#  ISEKAI STACK - SISTEMA MAESTRO v9.0 (SENTINEL OS - SUPER-LINK EDITION)
+#  ISEKAI STACK - SISTEMA MAESTRO v10.0 (SENTINEL OS - SUPER-LINK EDITION)
 #  "Zero-Touch: El sistema que domina su propia integridad"
 
 # --- PALETA DE COLORES (THE MATRIX & CYBERPUNK) ---
@@ -26,7 +26,7 @@ function print_matrix_header() {
     echo "   ██║╚██╔╝██║██╔══██║   ██║   ██╔══██╗██║ ██╔██╗ "
     echo "   ██║ ╚═╝ ██║██║  ██║   ██║   ██║  ██║██║██╔╝ ██╗"
     echo "   ╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝"
-    echo -e "   ${C_CYAN}─── SENTINEL OS // GENESIS EDITION v9.0 // SUPER-LINK ───${NC}"
+    echo -e "   ${C_CYAN}─── SENTINEL OS // GENESIS EDITION v10.0 // SUPER-LINK ───${NC}"
     echo -e "   ${M_DARK}═════════════════════════════════════════════════${NC}"
 }
 
@@ -46,17 +46,62 @@ function show_links() {
     echo -e "    ├─ 🐘 PgAdmin 4:      ${C_YELLOW}http://localhost:5050${NC}"
     echo -e "    ├─ 📦 MinIO Console:  ${C_YELLOW}http://localhost:9001${NC}"
     echo -e "    └─ 🧠 Redis Insight:  ${C_YELLOW}http://localhost:5540${NC}"
+    echo ""
+}
+
+function show_credentials_hud() {
+    echo -e "   ${BOLD}${C_PINK}🔐 BOVEDA DE CREDENCIALES (NIVEL 0)${NC}"
+    echo -e "   ────────────────────────────────────────────────"
+    
+    # Extraction
+    local evo_key=$(python ops/scripts/get_env_var.py EVOLUTION_API_KEY)
+    local cw_id=$(python ops/scripts/get_env_var.py CHATWOOT_GLOBAL_ACCOUNT_ID)
+    local cw_token=$(python ops/scripts/get_env_var.py CHATWOOT_GLOBAL_TOKEN)
+    local cw_db_pass=$(python ops/scripts/get_env_var.py CHATWOOT_DB_PASSWORD)
+    # n8n encryption key
+    local n8n_key=$(python ops/scripts/get_env_var.py N8N_ENCRYPTION_KEY)
+    
+    # Admin Credentials
+    local admin_email=$(python ops/scripts/get_env_var.py PGADMIN_DEFAULT_EMAIL)
+    local admin_pass=$(python ops/scripts/get_env_var.py PGADMIN_DEFAULT_PASSWORD)
+    
+    # Infrastructure
+    local pg_root=$(python ops/scripts/get_env_var.py POSTGRES_ROOT_PASSWORD)
+    local minio_root=$(python ops/scripts/get_env_var.py MINIO_ROOT_PASSWORD)
+    local redis_pass=$(python ops/scripts/get_env_var.py REDIS_PASSWORD)
+
+    echo -e "   ${BOLD}${C_CYAN}1. INFRAESTRUCTURA CORE:${NC}"
+    echo -e "      🐘 Postgres Root:  ${M_GREEN}${pg_root}${NC}"
+    echo -e "      🧠 Redis Pass:     ${M_GREEN}${redis_pass}${NC}"
+    echo -e "      📦 MinIO Root:     ${M_GREEN}${minio_root}${NC}"
+    echo ""
+
+    echo -e "   ${BOLD}${C_CYAN}2. APLICACIONES:${NC}"
+    echo -e "      🧬 Evolution API:  ${C_YELLOW}${evo_key}${NC}"
+    echo -e "      💬 Chatwoot DB:    ${M_GREEN}${cw_db_pass}${NC}"
+    echo -e "      ⚡ n8n Encryption: ${M_GREEN}${n8n_key}${NC}"
+    echo ""
+
+    echo -e "   ${BOLD}${C_CYAN}3. ACCESO ADMIN (Chatwoot / n8n / PgAdmin):${NC}"
+    echo -e "      👤 Admin Email:    ${C_WHITE}${admin_email}${NC}"
+    echo -e "      🔑 Admin Pass:     ${C_WHITE}${admin_pass}${NC}"
+    
+    echo -e "   ────────────────────────────────────────────────"
+    echo -e "   ${M_DARK}>> Copia y pega estas claves donde se requieran.${NC}"
+    echo -e "   ${C_WHITE}Presiona Enter para cerrar.${NC}"
 }
 
 function status_hud() {
     while true; do
         print_matrix_header
-        echo -e "   ${BOLD}${C_PINK}📡 MONITOR DE SISTEMA (LIVE)${NC}"
-        echo -e "   ──────────────────────────────────────"
-        docker ps --format "   {{.Names}} >> {{.Status}}" | \
-        sed "s/Up/$(echo -e "${M_GREEN}ONLINE${NC}")/g" | \
-        sed "s/Restarting/$(echo -e "${C_YELLOW}BOOTING${NC}")/g" | \
-        sed "s/Exited/$(echo -e "${C_RED}OFFLINE${NC}")/g"
+        echo -e "   ${BOLD}${C_PINK}📡 MONITOR DE SISTEMA v11.0 (LIVE PERFORMANCE)${NC}"
+        echo -e "   ────────────────────────────────────────────────────────"
+        echo -e "   ${BOLD}CONTAINER ID   NAME                 CPU %     MEM USAGE / LIMIT     NET I/O${NC}"
+        
+        # We use docker stats --no-stream --format to create a nice table
+        # We filter only our stack containers
+        docker stats --no-stream --format "table {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}" | grep -E "app_evolution|chatwoot|db_core|cache_core|minio|n8n|cloudflared" | sed 's/^/   /'
+        
         echo ""
         echo -e "   ${C_WHITE}[R] Recargar  [Q] Salir al Menú${NC}"
         read -n 1 -s key
@@ -77,56 +122,100 @@ function check_item() {
     fi
 }
 
+source ops/scripts/core_libs.sh
+
 function start_sequence() {
     print_matrix_header
-    echo -e "   ${BOLD}${M_GREEN}🚀 INICIANDO PROTOCOLO GÉNESIS (STARTUP AUTOMATIZADA)${NC}"
+    echo -e "   ${BOLD}${M_GREEN}🚀 INICIANDO PROTOCOLO GÉNESIS v11.0 (GOD MODE)${NC}"
     echo -e "   ────────────────────────────────────────────────────────"
     
-    # 1. Archivos e Integridad
+    # --- PHASE 1: PRE-FLIGHT ---
+    echo -e "   ${BOLD}${C_CYAN}[1/5] PRE-FLIGHT CHECKS:${NC}"
+    
+    # Check .env integrity
+    echo -n "    🛡️  Validando Integridad del .env..."
     python ops/scripts/sentinel_fixer.py --silent
-    check_item "Archivo .env (Blindaje Criptográfico)" "OK" "🛡️"
+    if [ $? -eq 0 ]; then echo -e "${M_GREEN} OK${NC}"; else echo -e "${C_RED} CORRUPTO${NC}"; exit 1; fi
     
-    # 2. Infraestructura Base
+    # Check network
+    echo -n "    🌐 Verificando Red 'secure-net'..."
+    docker network create secure-net > /dev/null 2>&1
+    echo -e "${M_GREEN} OK${NC}"
+    
+    echo ""
+
+    # --- PHASE 2: INFRASTRUCTURE ---
+    echo -e "   ${BOLD}${C_CYAN}[2/5] NÚCLEO DE DATOS (INFRA):${NC}"
     docker compose -f modules/01-infra/docker-compose.yml --env-file .env up -d > /dev/null 2>&1
-    check_item "Núcleo de Datos (Postgres/Redis/MinIO)" "OK" "📦"
     
-    # 3. Aplicaciones y Sincronía
-    docker compose -f modules/02-apps/docker-compose.yml --env-file .env up -d > /dev/null 2>&1
-    
-    # Verificación de API (Detección de 401)
-    evo_key=$(python ops/scripts/get_env_var.py EVOLUTION_API_KEY)
-    check_status=$(docker exec app_evolution curl -s -o /dev/null -w "%{http_code}" -H "apikey: $evo_key" http://localhost:8080/instance/fetchInstances 2>/dev/null || echo "000")
-    
-    if [[ "$check_status" == "401" ]]; then
-        echo -e "    ${C_YELLOW}⚠️  Desincronía Detectada (401). Iniciando Recalibración...${NC}"
-        docker compose -f modules/02-apps/docker-compose.yml up -d --force-recreate app_evolution > /dev/null 2>&1
-        check_item "Evolution API (Sincronización de Llaves)" "HEALED" "🧬"
-    else
-        check_item "Evolution API (Sincronización de Llaves)" "OK" "🧬"
+    check_postgres
+    if [ $? -ne 0 ]; then
+        echo -e "    ${C_RED}🚨 CRITICAL: La base de datos no responde. Abortando.${NC}"
+        read -p "Enter..."
+        return
     fi
     
-    check_item "Chatwoot & n8n (Interconectividad)" "OK" "⚡"
+    local redis_pass=$(python ops/scripts/get_env_var.py REDIS_PASSWORD)
+    check_redis "$redis_pass"
+    
+    # MinIO Health Check (HTTP)
+    # Replaced generic wait_for_port with specific health endpoint for speed
+    check_http_endpoint "MinIO Storage" "http://localhost:9000/minio/health/live"
+    echo ""
 
-    # 4. Sincronización Chatwoot <> Evolution (v9.0)
-    python ops/scripts/sentinel_fixer.py --silent
-    check_item "Vinculación Chatwoot-Evolution" "OK" "🔗"
+    # --- PHASE 3: APPLICATIONS ---
+    echo -e "   ${BOLD}${C_CYAN}[3/5] CAPA DE APLICACIÓN:${NC}"
+    docker compose -f modules/02-apps/docker-compose.yml --env-file .env up -d > /dev/null 2>&1
+    
+    # We must wait for Evolution specifically to detect 401
+    check_http_endpoint "Evolution API" "http://localhost:8080/instance/fetchInstances" "apikey: $(python ops/scripts/get_env_var.py EVOLUTION_API_KEY)"
+    if [ $? -ne 0 ]; then
+        echo -e "    ${C_YELLOW}⚠️  Fallo de Autenticación. Iniciando AUTO-HEAL...${NC}"
+        python ops/scripts/sentinel_fixer.py --force > /dev/null
+        docker compose -f modules/02-apps/docker-compose.yml up -d --force-recreate app_evolution > /dev/null 2>&1
+        echo -n "    🔄 Esperando reinicio de Evolution..."
+        sleep 10
+        check_http_endpoint "Evolution API (Retry)" "http://localhost:8080/instance/fetchInstances" "apikey: $(python ops/scripts/get_env_var.py EVOLUTION_API_KEY)"
+    fi
+    
+    check_http_endpoint "Chatwoot Web" "http://localhost:3000"
+    check_http_endpoint "n8n Workflow Editor" "http://localhost:5678"
+    echo ""
 
-    # 5. Puerta de Enlace
+    # --- PHASE 4: TUNNEL ---
+    echo -e "   ${BOLD}${C_CYAN}[4/5] ACCESO GLOBAL (TUNNEL):${NC}"
     docker compose -f modules/03-tunnel/docker-compose.yml --env-file .env up -d > /dev/null 2>&1
-    check_item "Túnel Cloudflare (Acceso Global)" "OK" "🌐"
+    echo -e "    🚇 Cloudflare Tunnel: ${M_GREEN}ONLINE${NC}"
+    echo ""
+
+    # --- PHASE 5: SUPER-LINK ---
+    echo -e "   ${BOLD}${C_CYAN}[5/5] VINCULACIÓN FINAL (SUPER-LINK):${NC}"
+    python ops/scripts/sentinel_fixer.py --silent
+    echo -e "    🔗 Evolution <> Chatwoot: ${M_GREEN}SINCRONIZADO${NC}"
 
     echo -e "   ────────────────────────────────────────────────────────"
-    echo -e "   ${M_GREEN}✨ PROTOCOLO FINALIZADO CON ÉXITO.${NC}"
+    echo -e "   ${M_GREEN}✨ SISTEMA OPERATIVO AL 100%${NC}"
     show_links
+    show_credentials_hud
     read -p "   Presiona Enter para volver al centro de mando..."
 }
 
 function stop_sequence() {
     print_matrix_header
     echo -e "   ${C_RED}💀 INICIANDO PROTOCOLO DE SUSPENSIÓN TOTAL...${NC}"
+    
+    start_spinner "Deteniendo Túnel..."
     docker compose -f modules/03-tunnel/docker-compose.yml --env-file .env down > /dev/null 2>&1
+    stop_spinner $?
+    
+    start_spinner "Deteniendo Apps (Evolution/Chatwoot)..."
     docker compose -f modules/02-apps/docker-compose.yml --env-file .env down > /dev/null 2>&1
+    stop_spinner $?
+    
+    start_spinner "Apagando Núcleo de Datos..."
     docker compose -f modules/01-infra/docker-compose.yml --env-file .env down > /dev/null 2>&1
+    stop_spinner $?
+    
     echo -e "   ${M_GREEN}✨ Desconexión Segura Completada.${NC}"
     read -p "Presiona Enter..."
 }
@@ -280,12 +369,32 @@ while true; do
         9)
             stop_sequence
             print_matrix_header
-            echo -e "   ${C_YELLOW}🧹 EJECUTANDO LIMPIEZA PROFUNDA...${NC}"
-            python ops/scripts/sentinel_fixer.py
-            docker system prune -f > /dev/null 2>&1
-            echo -e "   ${M_GREEN}✨ Sistema purgado. Iniciando en limpio...${NC}"
-            sleep 2
-            start_sequence
+            echo -e "   ${C_RED}☣️  ALERTA NUCLEAR: ESTO BORRARÁ TODO (DATOS, VOLÚMENES, REDES)${NC}"
+            echo -e "   ¿Estás 100% seguro de reiniciar el universo? (escribe 'BORRAR')"
+            read -p "   >> " confirm
+            if [[ "$confirm" == "BORRAR" ]]; then
+                echo -e "   ${C_YELLOW}🧹 EJECUTANDO LIMPIEZA PROFUNDA (SCORCHED EARTH)...${NC}"
+                
+                start_spinner "Purgando Contenedores e Imágenes..."
+                docker compose -f modules/01-infra/docker-compose.yml down --rmi local -v --remove-orphans > /dev/null 2>&1
+                docker compose -f modules/02-apps/docker-compose.yml down --rmi local -v --remove-orphans > /dev/null 2>&1
+                docker compose -f modules/03-tunnel/docker-compose.yml down --rmi local -v --remove-orphans > /dev/null 2>&1
+                stop_spinner $?
+                
+                start_spinner "Eliminando Volúmenes Persistentes..."
+                # Hard delete specific named volumes if docker compose didn't catch them
+                docker volume rm $(docker volume ls -q | grep "chatbot-stack") > /dev/null 2>&1
+                # Also prune system
+                docker system prune -f --volumes > /dev/null 2>&1
+                stop_spinner $?
+                
+                echo -e "   ${M_GREEN}✨ UNIVERSO PURGADO. RENACIENDO EN 3, 2, 1...${NC}"
+                sleep 3
+                start_sequence
+            else
+                echo "   Cancelado."
+                sleep 1
+            fi
             ;;
         ?) show_help ;;
     esac

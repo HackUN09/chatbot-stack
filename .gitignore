@@ -1,5 +1,9 @@
 # --- SECRETS ---
+# --- SECRETS ---
 .env
+ops/config/envs/*.env
+!ops/config/envs/.env.example
+
 
 # --- DOCKER DATA & PERSISTENCE ---
 persistence/

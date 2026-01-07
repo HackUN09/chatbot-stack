@@ -18,7 +18,20 @@ def sanitize_env(silent=False):
         if not silent: print("   ⚠️ Archivo .env no encontrado!")
         return
 
-    # Deep Scrubbing Logic
+    # Integrity Check
+    try:
+        with open(ENV_FILE, "r", encoding="utf-8") as f:
+            f.read()
+    except Exception:
+        if not silent: print("   ⚠️ .env CORRUPTO detectado. Intentando recuperar de .bak o reconstruir...")
+        if os.path.exists(f"{ENV_FILE}.bak"):
+            shutil.copy(f"{ENV_FILE}.bak", ENV_FILE)
+            if not silent: print("   ✅ Restaurado desde backup.")
+        else:
+            if not silent: print("   ❌ No backup found. Manual intervention required.")
+            return
+
+    # Deep Scrubbing (Safe Mode)
     shutil.copy(ENV_FILE, f"{ENV_FILE}.bak")
     
     clean_lines = []
@@ -118,11 +131,16 @@ def sync_chatwoot_integration(env, instance_name, silent=False):
     domain = env.get("DOMAIN")
     api_key = env.get("EVOLUTION_API_KEY")
     port = env.get("EVOLUTION_PORT") or "8080"
+    db_pass = env.get("CHATWOOT_DB_PASSWORD")
     
     if not token or not account_id or not domain:
         return
 
-    chat_url = f"https://chat.{domain}"
+    # Estándar de Oro: URL sin slash final
+    chat_url = f"https://chat.{domain}".rstrip("/")
+    
+    # Auto-ensamblaje de URI de Importación (Requisito para Historial)
+    import_uri = f"postgresql://chatwoot_user:{db_pass}@db_core:5432/chatwoot?sslmode=disable"
     
     config = {
         "enabled": True,
@@ -130,26 +148,26 @@ def sync_chatwoot_integration(env, instance_name, silent=False):
         "token": token,
         "url": chat_url,
         "webhook_url": True,
+        "autoCreate": True,
         "importContacts": True,
         "importMessages": True,
+        "daysLimitImportMessages": 365,
         "reopenConversation": True,
         "conversationPending": False
     }
     
     try:
-        payload = json.dumps(config).replace('"', '\\"')
-        cmd = [
-            "docker", "exec", EVOLUTION_CONTAINER, 
-            "curl", "-s", "-X", "POST", 
-            "-H", f"apikey: {api_key}",
-            "-H", "Content-Type: application/json",
-            "-d", f'"{payload}"',
-            f"http://localhost:{port}/chatwoot/set/{instance_name}"
-        ]
-        # We use a slightly different approach for the JSON payload in docker exec
-        shell_cmd = f'docker exec {EVOLUTION_CONTAINER} curl -s -X POST -H "apikey: {api_key}" -H "Content-Type: application/json" -d "{payload}" http://localhost:{port}/chatwoot/set/{instance_name}'
+        payload = json.dumps(config)
+        # Sincronización Doble: API + DB URI injection
+        shell_cmd = f'docker exec {EVOLUTION_CONTAINER} wget -qO- --post-data=\'{payload}\' --header="Content-Type: application/json" --header="apikey: {api_key}" http://localhost:{port}/chatwoot/set/{instance_name}'
         subprocess.run(shell_cmd, shell=True, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        if not silent: print(f"      🔗 Link Chatwoot OK: [{instance_name}] -> ID:{account_id}")
+        
+        # Inyectar la URI al .env si no existe o es diferente
+        if env.get("CHATWOOT_IMPORT_DATABASE_CONNECTION_URI") != import_uri:
+            with open(ENV_FILE, "a") as f:
+                f.write(f"\nCHATWOOT_IMPORT_DATABASE_CONNECTION_URI={import_uri}\n")
+        
+        if not silent: print(f"      🔗 Link Chatwoot OK (Provisionado): [{instance_name}] -> ID:{account_id}")
     except Exception as e:
         if not silent: print(f"      ❌ Error vinculando Chatwoot: {e}")
 
@@ -159,23 +177,29 @@ def verify_and_heal_evolution(env, force_heal=False, silent=False):
     port = env.get("EVOLUTION_PORT") or "8080"
     
     try:
+        # Usamos wget porque la imagen sentinel no tiene curl
         cmd = [
             "docker", "exec", EVOLUTION_CONTAINER, 
-            "curl", "-s", "-X", "GET", 
-            "-H", f"apikey: {api_key}",
+            "wget", "-qO-", "--header", f"apikey: {api_key}",
             f"http://localhost:{port}/instance/fetchInstances"
         ]
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode == 0:
             try:
-                instances = json.loads(result.stdout)
+                data = json.loads(result.stdout)
+                # Soportar v2 (lista directa o envuelta en 'value')
+                instances = data if isinstance(data, list) else data.get("value", [])
+                
                 for inst in instances:
-                    name = inst.get("instanceName")
-                    status = inst.get("status")
+                    # Soportar v1 (instanceName) y v2 (name)
+                    name = inst.get("name") or inst.get("instanceName")
+                    # Soportar v1 (status) y v2 (connectionStatus)
+                    status = inst.get("connectionStatus") or inst.get("status")
+                    
                     if not silent: print(f"      - [{name}]: {status}")
                     
                     # God Mode: Auto-purge if status is problematic
-                    if status in ["ERROR", "DISCONNECTED", "CLOSED"] or force_heal:
+                    if status in ["ERROR", "DISCONNECTED", "CLOSED", "close", "refused"] or force_heal:
                         if not silent: print(f"      🚨 Curando instancia '{name}' (Purga de Sesión)...")
                         purge_cmd = ["docker", "exec", EVOLUTION_CONTAINER, "rm", "-rf", f"/evolution/instances/{name}"]
                         subprocess.run(purge_cmd, check=False)

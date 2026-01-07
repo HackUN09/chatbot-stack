@@ -1,50 +1,48 @@
-# 🚀 GUÍA DE DESPLIEGUE A GITHUB
+# 🚀 GUÍA DE DESPLIEGUE A GITHUB (HackUN09 Edition)
 
-Sigue estos pasos para subir tu proyecto de forma profesional y segura. Gracias al `.gitignore` que configuramos, tus secretos (`.env`) y bases de datos están protegidos.
+Esta guía asegura que tu Sentinel OS v9.0 se suba a GitHub con la identidad correcta y de forma blindada.
 
 ---
 
-## 1. Inicializar el Repositorio Local
-Abre una terminal en la raíz de tu proyecto (`chatbot-stack`) y ejecuta:
-
+## 1. Configurar Identidad (HackUN09)
+Asegúrate de que tus commits lleven tu firma oficial:
 ```bash
-# Inicializar Git
-git init
+git config --global user.name "HackUN09"
+git config --global user.email "wamr1991.1@gmail.com"
+```
 
-# Añadir todos los archivos (Git filtrará automáticamente lo que está en .gitignore)
+## 2. Preparar el Lanzamiento v9.0
+Antes de subir, realizamos el "sellado" de la versión:
+```bash
+# Añadir todos los cambios (limpios por .gitignore)
 git add .
 
-# Crear el primer commit
-git commit -m "feat: Initial release - Isekai Hardened Stack v4.1 God Mode"
+# Commit Maestro
+git commit -m "Genesis v9.0: Sentinel OS - Super-Link Edition (Automated)"
+
+# Crear etiqueta de versión oficial
+git tag -a v9.0.0 -m "Genesis Edition v9.0"
 ```
 
-## 2. Crear el Repositorio en GitHub
-1. Ve a tu cuenta de [GitHub](https://github.com/new).
-2. Ponle un nombre (ej: `chatbot-stack`).
-3. **IMPORTANTE**: Selecciona **Private** (Privado) si no quieres que el código sea público aún.
-4. **NO** selecciones "Initialize this repository with a README" (ya lo tenemos creado aquí).
-5. Haz clic en **Create repository**.
-
-## 3. Vincular y Subir
-GitHub te dará un link que termina en `.git`. Ejecuta estos comandos reemplazando `TU_URL_AQUI` por ese link:
-
+## 3. Subir a GitHub
+Vincular y empujar (incluyendo las etiquetas de versión):
 ```bash
-# Cambiar a la rama principal
+# Cambiar a rama principal
 git branch -M main
 
-# Vincular con GitHub
-git remote add origin TU_URL_AQUI
+# Vincular (Reemplaza con tu URL real)
+git remote add origin https://github.com/HackUN09/chatbot-stack.git
 
-# Subir el código
-git push -u origin main
+# Subir código y etiquetas
+git push -u origin main --tags
 ```
 
 ---
 
-## 🛡️ Consejos de Seguridad Pro
-- **Nunca borres el .gitignore**: Es tu escudo protector.
-- **Doble Verificación**: Antes del `git push`, puedes ejecutar `git status` para confirmar que no se están subiendo carpetas pesadas como `persistence/` o el archivo `.env`.
-- **Snapshots**: Antes de cada gran cambio, usa la **Opción 6** del Sistema Maestro para tener un respaldo local rápido en `.zip`.
+## 🛡️ Protocolo de Seguridad
+- **Permisos**: Mantén el repositorio como **Private** en GitHub.
+- **Blindaje**: El archivo `.gitignore` ya está configurado para excluir `persistence/`, `.env` y archivos temporales. **Nunca desactives Git**.
+- **Snapshots**: Antes de un comando destructivo, usa la **Opción 6** del Maestro para un respaldo local.
 
 ---
-*¡Felicidades! Tu infraestructura ahora vive en la nube de forma profesional.*
+*¡Código subido, versión sellada. v9.0 operacional en la nube!*
