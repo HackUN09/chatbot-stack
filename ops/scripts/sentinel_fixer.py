@@ -140,7 +140,7 @@ def sync_chatwoot_integration(env, instance_name, silent=False):
     chat_url = f"https://chat.{domain}".rstrip("/")
     
     # Auto-ensamblaje de URI de Importación (Requisito para Historial)
-    import_uri = f"postgresql://chatwoot_user:{db_pass}@db_core:5432/chatwoot?sslmode=disable"
+    import_uri = f"postgresql://chatwoot_user:{db_pass}@db_core:5432/chatwoot?schema=public&sslmode=disable"
     
     config = {
         "enabled": True,
@@ -246,7 +246,7 @@ def main():
     args = parser.parse_args()
 
     if not args.silent:
-        print("⚕️  SENTINEL FIXER v6.0 [SUPER-LINK]: Curación y Vinculación Autónoma...")
+        print("⚕️  SENTINEL FIXER v11.0 [SUPER-LINK]: Curación y Vinculación Autónoma...")
     
     sanitize_env(args.silent)
     clean_stale_pids(args.silent)

@@ -1,65 +1,64 @@
 # 📖 GUÍA MAESTRA DE CONFIGURACIÓN Y OPERACIÓN (v11.0 Sentinel OS)
 
-Este manual detalla cómo configurar, operar y dominar el **Sentinel OS Genesis v11.0**.
+Este manual es la autoridad definitiva para desplegar el **Sentinel OS Genesis v11.0 Gold Master**. Sigue estos pasos para un sistema perfecto.
 
 ---
 
-## 1. ⚙️ Variables de Entorno (.env)
-El corazón de la configuración. Sentinel OS v11.0 introduce el bloque de **Super-Link**.
-
-### A. Configuración de Red y Gateway
-- `DOMAIN`: Tu dominio (ej: `isekaichat.com`).
-- `CLOUDFLARE_TUNNEL_TOKEN`: Conecta tu servidor local con el Gateway de Cloudflare.
-
-### B. Bloque Super-Link (v11.0)
-- `CHATWOOT_GLOBAL_TOKEN`: Tu token de acceso de Chatwoot (Perfil -> Token de acceso).
-- `CHATWOOT_GLOBAL_ACCOUNT_ID`: El ID de tu cuenta de Chatwoot (usualmente `1` o `2`).
-- *Sentinel Fixer usará estos valores para vincular Evolution automáticamente.*
-
-### C. Secretos de Infraestructura (Capa 01)
-- `POSTGRES_ROOT_PASSWORD`: Contraseña del superusuario.
-- `REDIS_PASSWORD`: Seguridad para la caché central.
-- `MINIO_ROOT_PASSWORD`: Acceso administrativo al almacenamiento S3 local.
+## 🛠️ Requisitos Previos (Antes de empezar)
+Para que el sistema funcione, **DEBES** tener listos los siguientes datos externos:
+1.  **Dominio Propio**: Un dominio apuntando a tu servidor (ej: `isekaichat.com`).
+2.  **Cloudflare Tunnel**: Crea un túnel en Cloudflare Zero Trust y obtén el **Tunnel Token**.
+3.  **Docker & Docker Compose**: Instalados y operativos en tu servidor Linux.
 
 ---
 
-## 2. 🏛️ Arquitectura Modular
-Sentinel OS utiliza una **Estructura Modular Segregada** bajo la red `secure-net`.
+## 🚀 Guía de Arranque (Paso a Paso)
 
-- **Módulo 01 (Infra)**: PostgreSQL 15, Redis 7, MinIO.
-- **Módulo 02 (Apps)**: Chatwoot v3.12, Evolution API v2.3.7, n8n Core.
-- **Módulo 03 (Tunnel)**: Cloudflared (Acceso Zero-Trust).
+### 1. Preparación del Entorno
+Copia la plantilla de secretos y configúrala:
+```bash
+cp .env.example .env
+```
+Edita el `.env` y rellena los campos críticos:
+- `DOMAIN`: Tu dominio real.
+- `CLOUDFLARE_TUNNEL_TOKEN`: Tu token de Cloudflare.
+- **Passwords**: Puedes generarlas manualmente o usar el script `python ops/scripts/generate_secrets.py` para llenar los campos `generate_...`.
+
+### 2. El Primer Lanzamiento
+Ejecuta el orquestador principal:
+```bash
+./sistema_maestro.sh
+```
+Selecciona la **Opción 1: Lanzar Sistema Completo**.
+> [!NOTE] 
+> En este primer arranque, Chatwoot se instalará pero aún no tendrás el Token de API para el Super-Link. Es normal que veas una advertencia de vinculación al final.
+
+### 3. Configuración del Super-Link (Sincronización Total)
+Para que Evolution API y Chatwoot hablen perfectamente:
+1. Entra a `https://chat.tu-dominio.com`.
+2. Crea tu cuenta de Administrador.
+3. Ve a **Ajustes de Perfil** (abajo a la izquierda) y copia el **Token de Acceso**.
+4. Edita tu `.env` y pega el token en `CHATWOOT_GLOBAL_TOKEN`.
+5. Asegúrate de que `CHATWOOT_GLOBAL_ACCOUNT_ID` coincida con tu ID de cuenta (por defecto es `1`).
+6. Reinicia el sistema desde el menú (Opción 2 y luego Opción 1) o simplemente ejecuta la **Opción 5 (Sentinel Hyper-Integrity)**.
+
+---
+
+## 📂 Glosario de Variables Críticas
+
+| Variable | Descripción | Importancia |
+| :--- | :--- | :--- |
+| `S3_ENDPOINT` | Dominio público de tu S3 (MinIO). | **Crítica** para ver fotos/audios. |
+| `SIDEKIQ_CONCURRENCY` | Hilos de procesamiento de mensajes. | **Alta** para ráfagas de usuarios. |
+| `TURBO_SYNC_URI` | Enlace directo a la DB de Chatwoot. | **Alta** para no perder historial. |
 
 ---
 
-## 3. 🧩 Operación de Sentinel Fixer v11.0 (El Sanador)
-El `sentinel_fixer.py` es el motor de integridad. Sus funciones en v11.0 son:
+## 🩺 Resolución de Problemas (Troubleshooting)
 
-1.  **Sanitización Blindada**: Limpia el `.env` de espacios extra o bytes nulos al inicio del arranque.
-2.  **Vinculación Automática (Auto-Link)**:
-    -   Consulta la API de Evolution buscando todas las instancias.
-    -   Por cada instancia encontrada, aplica la configuración de Chatwoot definida en el `.env`.
-    -   Activa los webhooks de sincronización de contactos y mensajes automáticamente.
-3.  **Auto-Heal Purge**: Si una instancia de WhatsApp está en estado `ERROR` o `DISCONNECTED`, purga la sesión físicamente para que puedas escanear el QR desde cero sin conflictos.
+- **¿No se ven las imágenes?**: Asegúrate de que `S3_ENDPOINT` sea `s3.tu-dominio.com` y no una IP interna.
+- **¿Error 401 en Evolution?**: Usa la **Opción 5** en el menú principal para re-sincronizar llaves.
+- **¿Sistema lento?**: Verifica los logs con la **Opción 4** para identificar cuellos de botella en la base de datos.
 
 ---
-
-## 🎮 Operación en Consola (Sistema Maestro)
-
-1.  **Génesis Start (1)**: Lanza todo el stack. Ejecuta el checklist de salud v11.0.
-2.  **Sentinel Hyper-Integrity (5)**: 
-    -   **Opción Normal**: Verifica conectividad y permisos.
-    -   **Opción 'F' (Forzar)**: Realiza una curación profunda, purga sesiones de Evolution y fuerza la re-vinculación de Chatwoot.
-3.  **Bóveda de Secretos (7)**: Muestra todas las URLs y contraseñas reales generadas en tu `.env`.
-4.  **Auditoría Inteligente (8)**: Ejecuta `system_audit.py` y genera un reporte detallado en `ops/docs/ULTIMATE_AUDIT.md`.
-
----
-
-## 🔄 Cómo Replicar o Migrar
-1.  Clona el repositorio.
-2.  Prepara tu `.env` con los dominios y tokens.
-3.  Ejecuta `./sistema_maestro.sh`.
-4.  Selecciona la **Opción 1**. El sistema se auto-construirá y auto-vinculará.
-
----
-*Robustez. Integridad. Dominación. v11.0 - HackUN09.*
+*Robustez. Integridad. Dominación. v11.0 - Protocolo Sentinel.*

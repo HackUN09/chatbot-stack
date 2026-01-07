@@ -26,7 +26,7 @@ function print_matrix_header() {
     echo "   ██║╚██╔╝██║██╔══██║   ██║   ██╔══██╗██║ ██╔██╗ "
     echo "   ██║ ╚═╝ ██║██║  ██║   ██║   ██║  ██║██║██╔╝ ██╗"
     echo "   ╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝"
-    echo -e "   ${C_CYAN}─── SENTINEL OS // GENESIS EDITION v10.0 // SUPER-LINK ───${NC}"
+    echo -e "   ${C_CYAN}─── SENTINEL OS // GENESIS EDITION v11.0 // GOLD MASTER ───${NC}"
     echo -e "   ${M_DARK}═════════════════════════════════════════════════${NC}"
 }
 
@@ -232,7 +232,6 @@ function backup_logic() {
         2) 
             echo "   Generando Dumps de Postgres..."
             timestamp=$(date +"%Y%m%d_%H%M%S")
-            timestamp=$(date +"%Y%m%d_%H%M%S")
             root_pass=$(python ops/scripts/get_env_var.py POSTGRES_ROOT_PASSWORD)
             for db in chatwoot evolution n8n; do
                 docker exec -e PGPASSWORD=$root_pass db_core pg_dump -U root_admin -d $db > ops/backups/${db}_backup_${timestamp}.sql
@@ -271,7 +270,7 @@ function vault_reveal() {
 
 function show_help() {
     print_matrix_header
-    echo -e "   ${C_YELLOW}📘 MANUAL DE OPERACIONES SENTINEL v5.0${NC}"
+    echo -e "   ${C_YELLOW}📘 MANUAL DE OPERACIONES SENTINEL v11.0${NC}"
     echo -e "   ──────────────────────────────────────────────"
     echo -e "   ${BOLD}1. ⚡ Lanzar Sistema Completo:${NC}"
     echo -e "      Detecta errores, auto-repara el .env, limpia PIDs y arranca todo."
@@ -335,7 +334,6 @@ while true; do
         5) 
             print_matrix_header
             echo -e "   ${M_GREEN}⚕️  CHEQUEANDO CONSTANTES VITALES...${NC}"
-            db_status=$(docker exec db_core pg_isready -U root_admin > /dev/null 2>&1 && echo -e "${M_GREEN}ONLINE${NC}" || echo -e "${C_RED}ERROR${NC}")
             db_status=$(docker exec db_core pg_isready -U root_admin > /dev/null 2>&1 && echo -e "${M_GREEN}ONLINE${NC}" || echo -e "${C_RED}ERROR${NC}")
             redis_status=$(docker exec cache_core redis-cli -a $(python ops/scripts/get_env_var.py REDIS_PASSWORD) ping > /dev/null 2>&1 && echo -e "${M_GREEN}PONG${NC}" || echo -e "${C_RED}DOWN${NC}")
             echo -e "   Núcleo DB: $db_status"
