@@ -2,40 +2,40 @@
 <div align="center">
 
 # ⛩️ ISEKAI STACK (SENTINEL OS)
-### Enterprise AI Chatbot Infrastructure v11.0 [GOLD MASTER]
+### Infraestructura Enterprise de Chatbots IA v11.0 [GOLD MASTER]
 
-[![Status](https://img.shields.io/badge/Status-Operational-success?style=for-the-badge&logo=statuspage)]()
-[![System](https://img.shields.io/badge/System-Sentinel_OS-blueviolet?style=for-the-badge&logo=linux)]()
-[![Docker](https://img.shields.io/badge/Container-Docker_Compose-2496ED?style=for-the-badge&logo=docker)]()
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)]()
+[![Status](https://img.shields.io/badge/Estado-Operativo-success?style=for-the-badge&logo=statuspage)]()
+[![System](https://img.shields.io/badge/Sistema-Sentinel_OS-blueviolet?style=for-the-badge&logo=linux)]()
+[![Docker](https://img.shields.io/badge/Contenedor-Docker_Compose-2496ED?style=for-the-badge&logo=docker)]()
+[![License](https://img.shields.io/badge/Licencia-MIT-green?style=for-the-badge)]()
 
-*The "Zero-Touch" Infrastructure for Evolution API, Chatwoot, and n8n.*
+*La Infraestructura "Zero-Touch" para Evolution API, Chatwoot y n8n.*
 
-[🚀 Quick Start](#-quick-start) • [🏗 Architecture](#-architecture) • [🔧 Configuration](#-configuration) • [🩺 Diagnostics](#-diagnostics-sentinel-hud)
+[🚀 Inicio Rápido](#-inicio-rápido) • [🏗 Arquitectura](#-arquitectura) • [🔧 Configuración](#-configuración) • [🩺 Diagnóstico](#-diagnóstico-sentinel-hud)
 
 </div>
 
 ---
 
-## 📖 Overview
+## 📖 Resumen
 
-**Isekai Stack** is a production-ready, highly automated infrastructure designed to deploy and manage a complete conversational AI ecosystem. Built with a "Zero-Touch" philosophy, it includes self-healing capabilities, automated integrity checks, and a gamified command center known as **Sentinel OS**.
+**Isekai Stack** es una infraestructura lista para producción, altamente automatizada y diseñada para desplegar y gestionar un ecosistema completo de IA conversacional. Construida bajo la filosofía "Zero-Touch", incluye capacidades de auto-curación, verificación de integridad automatizada y un centro de comando gamificado conocido como **Sentinel OS**.
 
-### 🧩 Core Components
-*   **Evolution API v2**: The heart of WhatsApp connectivity.
-*   **Chatwoot (Super-Linked)**: Omnichannel customer support platform, automatically provisioned.
-*   **n8n**: Workflow automation engine for AI logic.
-*   **Postgres & Redis**: High-performance persistence and caching layer.
-*   **Cloudflare Tunnel**: Secure, zero-config global access.
+### 🧩 Componentes Principales
+*   **Evolution API v2**: El corazón de la conectividad con WhatsApp.
+*   **Chatwoot (Super-Linked)**: Plataforma de soporte omnicanal, provisionada automáticamente.
+*   **n8n**: Motor de automatización de flujos para lógica de IA.
+*   **Postgres & Redis**: Capa de persistencia y caché de alto rendimiento.
+*   **Cloudflare Tunnel**: Acceso global seguro, sin configuraciones complejas.
 
 ---
 
-## 🏗 Architecture
+## 🏗 Arquitectura
 
 ```mermaid
 graph TD
-    user((User / WA)) -->|HTTPS| cloudflare[Cloudflare Tunnel]
-    cloudflare -->|Secure Net| nginx[Reverse Proxy / Apps]
+    user((Usuario / WA)) -->|HTTPS| cloudflare[Cloudflare Tunnel]
+    cloudflare -->|Red Segura| nginx[Proxy Inverso / Apps]
     
     subgraph "Isekai Stack (Docker)"
         evolution[Evolution API]
@@ -49,8 +49,8 @@ graph TD
         minio[(MinIO Storage)]
         
         evolution <-->|Auto-Link| chatwoot
-        evolution -->|Events| n8n
-        sentinel -->|Heals| evolution
+        evolution -->|Eventos| n8n
+        sentinel -->|Auto-Cura| evolution
         
         chatwoot --> db & redis & minio
         evolution --> db & redis & minio
@@ -60,98 +60,98 @@ graph TD
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Inicio Rápido
 
-### Prerequisites
+### Prerrequisitos
 *   Docker & Docker Compose
 *   Python 3.9+
 *   Git
 
-### Installation (Zero-Touch)
+### Instalación (Zero-Touch)
 
-1.  **Clone the Repository**
+1.  **Clonar el Repositorio**
     ```bash
     git clone https://github.com/HackUN09/chatbot-stack.git
     cd chatbot-stack
     ```
 
-2.  **Configure Environment**
-    Copy the template and fill in your secrets.
+2.  **Configurar Entorno**
+    Copia la plantilla y rellena tus secretos.
     ```bash
     cp ops/config/envs/.env.example .env
-    # Edit .env with your domains and passwords
+    # Edita .env con tus dominios y contraseñas
     ```
 
-3.  **Launch Sentinel OS**
-    The system includes a Master Script that handles everything.
+3.  **Lanzar Sentinel OS**
+    El sistema incluye un Script Maestro que maneja todo.
     ```bash
     ./sistema_maestro.sh
     ```
-    *Select **Option 1 (Lanzar Sistema Completo)**.*
+    *Selecciona la **Opción 1 (Lanzar Sistema Completo)**.*
 
 ---
 
-## 🔧 Configuration
+## 🔧 Configuración
 
-The configuration is modularized for better maintainability:
+La configuración está modularizada para un mejor mantenimiento:
 
-| File | Location | Purpose |
+| Archivo | Ubicación | Propósito |
 | :--- | :--- | :--- |
-| **`.env`** | `root` | **Master Configuration**. Controls all passwords, domains, and global keys. |
-| `internal_evo.env` | `ops/config/envs/` | Advanced settings for Evolution API. |
-| `internal_cw.env` | `ops/config/envs/` | Reference config for Chatwoot. |
-| `internal_n8n.env` | `ops/config/envs/` | Reference config for n8n. |
+| **`.env`** | `raíz` | **Configuración Maestra**. Controla todas las contraseñas, dominios y llaves globales. |
+| `internal_evo.env` | `ops/config/envs/` | Ajustes avanzados para Evolution API. |
+| `internal_cw.env` | `ops/config/envs/` | Configuración de referencia para Chatwoot. |
+| `internal_n8n.env` | `ops/config/envs/` | Configuración de referencia para n8n. |
 
 ---
 
-## 🩺 Diagnostics (Sentinel HUD)
+## 🩺 Diagnóstico (Sentinel HUD)
 
-Sentinel OS includes a real-time HUD (Heads-Up Display) for system management.
+Sentinel OS incluye un HUD (Heads-Up Display) en tiempo real para la gestión del sistema.
 
-![Sentinel HUD](https://via.placeholder.com/800x400?text=Sentinel+OS+Dashboard+Preview)
+![Sentinel HUD](https://via.placeholder.com/800x400?text=Vista+Previa+Sentinel+OS+Dashboard)
 
-### Key Features
-*   **Auto-Healing**: Automatically detects and fixes 401 Unauthorized errors in Evolution API (`sentinel_fixer.py`).
-*   **Smart Provisioning**: Creating an Evolution instance automatically configures the inbox in Chatwoot using internal API calls.
-*   **Vault**: A secure view of your generated credentials.
-*   **Genesis Snapshot**: One-click backups of code and database dumps.
+### Características Clave
+*   **Auto-Curación**: Detecta y corrige automáticamente errores 401 Unauthorized en Evolution API (`sentinel_fixer.py`).
+*   **Provisionamiento Inteligente**: Al crear una instancia en Evolution, configura automáticamente la bandeja de entrada en Chatwoot usando llamadas internas a la API.
+*   **Bóveda**: Una vista segura de tus credenciales generadas.
+*   **Snapshot Génesis**: Copias de seguridad de código y dumps de base de datos con un clic.
 
-### Useful Commands
+### Comandos Útiles
 
 ```bash
-# Verify System Integrity
+# Verificar Integridad del Sistema
 python ops/scripts/sentinel_fixer.py --silent
 
-# Reconstruct corrupted .env
+# Reconstruir un .env corrupto
 python ops/scripts/env_reconstructor.py
 ```
 
 ---
 
-## 📂 Project Structure
+## 📂 Estructura del Proyecto
 
 ```text
 /
-├── .env                  # Master Secrets (GitIgnored)
-├── sistema_maestro.sh    # Sentinel OS Controller
-├── modules/              # Docker Compose Definitions
-│   ├── 01-infra/        # Databases & Storage
-│   ├── 02-apps/         # Main Applications
-│   └── 03-tunnel/       # Networking
-└── ops/                  # Operations Center
-    ├── config/envs/     # Configuration Templates
-    ├── scripts/         # Python Automation Scripts
-    └── docs/            # Detailed Documentation
+├── .env                  # Secretos Maestros (GitIgnored)
+├── sistema_maestro.sh    # Controlador Sentinel OS
+├── modules/              # Definiciones Docker Compose
+│   ├── 01-infra/        # Bases de Datos & Almacenamiento
+│   ├── 02-apps/         # Aplicaciones Principales
+│   └── 03-tunnel/       # Red & Networking
+└── ops/                  # Centro de Operaciones
+    ├── config/envs/     # Plantillas de Configuración
+    ├── scripts/         # Automatización Python
+    └── docs/            # Documentación Detallada
 ```
 
 ---
 
-## 👤 Author
+## 👤 Autor
 
 **HackUN09**
 *   Email: wamr1991.1@gmail.com
-*   Role: Systems Architect & Sentinel OS Developer
+*   Rol: Arquitecto de Sistemas & Desarrollador Sentinel OS
 
 ---
 
-*Verified by Sentinel Hyper-Integrity Protocol v11.0*
+*Verificado por Sentinel Hyper-Integrity Protocol v11.0*
