@@ -1,17 +1,17 @@
-# 📖 GUÍA MAESTRA DE CONFIGURACIÓN Y OPERACIÓN (v9.0 Sentinel OS)
+# 📖 GUÍA MAESTRA DE CONFIGURACIÓN Y OPERACIÓN (v11.0 Sentinel OS)
 
-Este manual detalla cómo configurar, operar y dominar el **Sentinel OS Genesis v9.0**.
+Este manual detalla cómo configurar, operar y dominar el **Sentinel OS Genesis v11.0**.
 
 ---
 
 ## 1. ⚙️ Variables de Entorno (.env)
-El corazón de la configuración. Sentinel OS v9.0 introduce el bloque de **Super-Link**.
+El corazón de la configuración. Sentinel OS v11.0 introduce el bloque de **Super-Link**.
 
 ### A. Configuración de Red y Gateway
 - `DOMAIN`: Tu dominio (ej: `isekaichat.com`).
 - `CLOUDFLARE_TUNNEL_TOKEN`: Conecta tu servidor local con el Gateway de Cloudflare.
 
-### B. Bloque Super-Link (v9.0)
+### B. Bloque Super-Link (v11.0)
 - `CHATWOOT_GLOBAL_TOKEN`: Tu token de acceso de Chatwoot (Perfil -> Token de acceso).
 - `CHATWOOT_GLOBAL_ACCOUNT_ID`: El ID de tu cuenta de Chatwoot (usualmente `1` o `2`).
 - *Sentinel Fixer usará estos valores para vincular Evolution automáticamente.*
@@ -32,8 +32,8 @@ Sentinel OS utiliza una **Estructura Modular Segregada** bajo la red `secure-net
 
 ---
 
-## 3. 🧩 Operación de Sentinel Fixer v6.0 (El Sanador)
-El `sentinel_fixer.py` es el motor de integridad. Sus funciones en v6.0 son:
+## 3. 🧩 Operación de Sentinel Fixer v11.0 (El Sanador)
+El `sentinel_fixer.py` es el motor de integridad. Sus funciones en v11.0 son:
 
 1.  **Sanitización Blindada**: Limpia el `.env` de espacios extra o bytes nulos al inicio del arranque.
 2.  **Vinculación Automática (Auto-Link)**:
@@ -46,7 +46,7 @@ El `sentinel_fixer.py` es el motor de integridad. Sus funciones en v6.0 son:
 
 ## 🎮 Operación en Consola (Sistema Maestro)
 
-1.  **Génesis Start (1)**: Lanza todo el stack. Ejecuta el checklist de salud v9.0.
+1.  **Génesis Start (1)**: Lanza todo el stack. Ejecuta el checklist de salud v11.0.
 2.  **Sentinel Hyper-Integrity (5)**: 
     -   **Opción Normal**: Verifica conectividad y permisos.
     -   **Opción 'F' (Forzar)**: Realiza una curación profunda, purga sesiones de Evolution y fuerza la re-vinculación de Chatwoot.
@@ -62,4 +62,4 @@ El `sentinel_fixer.py` es el motor de integridad. Sus funciones en v6.0 son:
 4.  Selecciona la **Opción 1**. El sistema se auto-construirá y auto-vinculará.
 
 ---
-*Robustez. Integridad. Dominación. v9.0 - HackUN09.*
+*Robustez. Integridad. Dominación. v11.0 - HackUN09.*

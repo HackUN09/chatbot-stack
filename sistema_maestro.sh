@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#  ISEKAI STACK - SISTEMA MAESTRO v10.0 (SENTINEL OS - SUPER-LINK EDITION)
+#  ISEKAI STACK - SISTEMA MAESTRO v11.0 (SENTINEL OS - GOLD MASTER)
 #  "Zero-Touch: El sistema que domina su propia integridad"
 
 # --- PALETA DE COLORES (THE MATRIX & CYBERPUNK) ---

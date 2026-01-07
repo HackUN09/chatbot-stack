@@ -1,6 +1,6 @@
-# 📔 Sentinel OS v9.0: Manual de Referencia Técnica (God Mode)
+# 📔 Sentinel OS v11.0: Manual de Referencia Técnica (God Mode)
 
-Este documento es el compendio definitivo de arquitectura, seguridad y operación para el **Sentinel OS Genesis v9.0**. Aquí se detalla la lógica de bajo nivel del sistema.
+Este documento es el compendio definitivo de arquitectura, seguridad y operación para el **Sentinel OS Genesis v11.0**. Aquí se detalla la lógica de bajo nivel del sistema.
 
 ---
 
@@ -21,7 +21,7 @@ Toda la comunicación entre contenedores ocurre en una red privada virtual de Do
 
 ---
 
-## 2. ⚕️ Sentinel Brain: El Motor de Curación (v6.0)
+## 2. ⚕️ Sentinel Brain: El Motor de Curación (v11.0)
 
 El archivo `ops/scripts/sentinel_fixer.py` es el componente más crítico. Su lógica de ejecución sigue este flujo:
 
@@ -68,7 +68,7 @@ Toda la información reside en la carpeta `persistence/` de la raíz:
 - `n8n_data/`: Flujos de trabajo y credenciales externas.
 
 ---
-*Este manual es propiedad de **HackUN09**. Fue refinado por **Antigravity** para la versión Genesis v9.0 Super-Link Edition.*
+*Este manual es propiedad de **HackUN09**. Fue refinado por **Antigravity** para la versión Genesis v11.0 Super-Link Edition.*
 
 3. Validar Red Docker:
 Asegúrese que la red externa existe antes de levantar infra.

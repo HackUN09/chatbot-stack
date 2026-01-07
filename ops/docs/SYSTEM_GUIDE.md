@@ -1,4 +1,4 @@
-# 📖 Guía del Sistema Sentinel OS (Genesis Edition v9.0)
+# 📖 Guía del Sistema Sentinel OS (Gold Master v11.0)
 
 Esta guía técnica detalla el funcionamiento interno de tu infraestructura blindada.
 
@@ -13,7 +13,7 @@ El sistema opera en una jerarquía de capas aisladas bajo la red interna `secure
 
 ## 🔬 Componentes Clave y Lógica Interna
 
-### 1. `sistema_maestro.sh` (El Orquestador v9.0)
+### 1. `sistema_maestro.sh` (El Orquestador v11.0)
 No es un simple script de arranque; es un vigilante de estado que ejecuta el **Protocolo Génesis**:
 1.  **Validación de Entorno:** Verifica la existencia de `.env` y carga las variables.
 2.  **Sanitación Previa:** Lanza `sentinel_fixer.py --silent` para limpiar el `.env` antes de que Docker lo lea.
@@ -21,7 +21,7 @@ No es un simple script de arranque; es un vigilante de estado que ejecuta el **P
 4.  **Detección de 401:** Realiza una petición `curl` interna a Evolution. Si detecta un error de autenticación, ejecuta un `--force-recreate` automático.
 5.  **Vinculación Súper-Link:** Activa el puente entre Evolution y Chatwoot sin intervención humana.
 
-### 2. `ops/scripts/sentinel_fixer.py` (Sentinel Brain v10.0)
+### 2. `ops/scripts/sentinel_fixer.py` (Sentinel Brain v11.0)
 El motor de auto-curación ("God Mode") especializado en la integridad de datos:
 -   **🛡️ Escudo Anti-Corrupción:** Verifica la integridad estructural del `.env` antes de cada lectura. Si detecta corrupción (código binario/basura), restaura automáticamente desde el último backup (`.env.bak`) o alerta al usuario.
 -   **Sanitización Quirúrgica:** Lee el `.env` en modo seguro, elimina bytes nulos y caracteres invisibles.
@@ -59,4 +59,4 @@ graph TD
 3.  Limpia la caché de tu navegador para asegurar que no guardes llaves antiguas.
 
 ---
-*Documentación v9.0 - HackUN09 & Antigravity.*
+*Documentación v11.0 - HackUN09 & Antigravity.*
