@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#  SENTINEL OS - ENTERPRISE CONTROL CENTER v11.0 
-#  "Simplicity. Stability. Performance."
+#  SENTINEL OS - CENTRO DE CONTROL EMPRESARIAL v11.0 
+#  "Sencillez. Estabilidad. Rendimiento."
 
 # --- SYSTEM CONTEXT ---
 export PYTHONIOENCODING=utf8
@@ -11,7 +11,7 @@ export LC_ALL=C.UTF-8
 ENGINE="python ops/scripts/sentinel_engine.py"
 
 # --- COLOR PALETTE (PROFESSIONAL) ---
-M_GREEN='\033[38;5;46m'    # Success Green
+M_GREEN='\033[38;5;46m'    # Verde Éxito
 N_PINK='\033[38;5;198m'     # Nequi Neon Pink
 E_CYAN='\033[38;5;51m'      # Electric Cyan
 P_PURPLE='\033[38;5;129m'   # Power Purple
@@ -31,7 +31,7 @@ function render_header() {
     echo "   ██║╚██╔╝██║██╔══██║   ██║   ██╔══██╗██║ ██╔██╗ "
     echo "   ██║ ╚═╝ ██║██║  ██║   ██║   ██║  ██║██║██╔╝ ██╗"
     echo "   ╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝"
-    echo -e "   ${N_PINK}─── SENTINEL OS // v11.0 // ENTERPRISE RELEASE ───${NC}"
+    echo -e "   ${N_PINK}─── SENTINEL OS // v11.0 // EDICIÓN EMPRESARIAL ───${NC}"
     echo -e "   ${D_GRAY}═══════════════════════════════════════════════════════════════${NC}"
 }
 
@@ -79,8 +79,8 @@ function render_vault() {
     local n8n_p=$($ENGINE --get N8N_DB_PASSWORD)
     local n8n_k=$($ENGINE --get N8N_ENCRYPTION_KEY)
     
-    echo -e "   ${BOLD}${N_PINK}╔══════════════ SYSTEM VAULT v11.0 // CONFIGURATION ══════════════════════╗${NC}"
-    echo -e "    ${E_CYAN}■ S3 OBJECT STORAGE (MINIO)${NC}"
+    echo -e "   ${BOLD}${N_PINK}╔══════════════ BÓVEDA DEL SISTEMA v11.0 // CONFIGURACIÓN ══════════════════════╗${NC}"
+    echo -e "    ${E_CYAN}■ ALMACENAMIENTO S3 (MINIO)${NC}"
     echo -e "    │  ${M_GREEN}📦 evolution-media  :${NC} [ READY ]  ${M_GREEN}📦 chatwoot-storage :${NC} [ READY ]"
     echo -e "    │  ${M_GREEN}🔑 ACCESS_KEY      :${NC} ${mn_u}      ${M_GREEN}🗝️  SECRET_KEY      :${NC} ${mn_p}"
     echo -e "    ${D_GRAY}├───────────────────────────────────────────────────────────────────${NC}"
@@ -119,7 +119,7 @@ function execute_genesis() {
     echo -e "   ${BOLD}${Y_GOLD}🚀 [BOOT_SEQUENCE] INICIANDO SENTINEL v11.0${NC}"
     
     # Micro-simulación de carga
-    local steps=("INITIALIZING_CONTROLLERS" "LOADING_CONFIG_BUFFERS" "SYNCING_SERVICE_MESH" "SYSTEM_READY")
+    local steps=("INICIALIZANDO_CONTROLADORES" "CARGANDO_BUFFERS_CONFIG" "SINCRONIZANDO_MALLA_SERVICIOS" "SISTEMA_LISTO")
     for step in "${steps[@]}"; do
         printf "   ${D_GRAY}>>${NC} %-30s " "$step"
         sleep 0.3
@@ -129,7 +129,7 @@ function execute_genesis() {
     draw_progress 5; echo -e "\n"
 
     # FASE 01: Infra
-    step_msg "📦" "STARTING INFRASTRUCTURE KERNEL..."
+    step_msg "📦" "INICIANDO NÚCLEO DE INFRAESTRUCTURA..."
     docker compose -f modules/01-infra/docker-compose.yml --env-file .env up -d > /dev/null 2>&1
     sleep 3
     draw_progress 35; echo -e "\n"
@@ -143,7 +143,7 @@ function execute_genesis() {
     echo ""
 
     # FASE 02: Apps
-    step_msg "⚡" "DEPLOYING APPLICATION LAYER..."
+    step_msg "⚡" "DESPLEGANDO CAPA DE APLICACIÓN..."
     docker compose -f modules/02-apps/docker-compose.yml --env-file .env up -d > /dev/null 2>&1
     draw_progress 70; echo -e "\n"
     sleep 12
@@ -152,22 +152,22 @@ function execute_genesis() {
     echo ""
 
     # FASE 03: Tunnel
-    step_msg "🚇" "ESTABLISHING SECURE TUNNEL..."
+    step_msg "🚇" "ESTABLECIENDO TÚNEL SEGURO..."
     docker compose -f modules/03-tunnel/docker-compose.yml --env-file .env up -d > /dev/null 2>&1
     draw_progress 90; echo -e "\n"
     echo -e "    ${E_CYAN}➤${NC} Tunnel Node: ${M_GREEN}ACTIVE-SHIELD${NC}"
     echo ""
 
     # FASE 04: Integrity (S3 Check)
-    step_msg "🧬" "VERIFYING STORAGE SUBSYSTEM..."
-    $ENGINE --setup-s3 | grep "VERIFIED" > /dev/null && echo -e "    ${M_GREEN}➤ BUCKETS_PROVISIONED: SUCCESS${NC}" || echo -e "    ${C_RED}➤ S3_FAILURE: CHECK MINIO${NC}"
+    step_msg "🧬" "VERIFICANDO SUBSISTEMA DE ALMACENAMIENTO..."
+    $ENGINE --setup-s3 | grep "VERIFIED" > /dev/null && echo -e "    ${M_GREEN}➤ BUCKETS_PROVISIONADOS: ÉXITO${NC}" || echo -e "    ${C_RED}➤ FALLO_S3: REVISAR MINIO${NC}"
     
-    step_msg "🔐" "RUNNING SELF-DIAGNOSTIC..."
+    step_msg "🔐" "EJECUTANDO AUTO-DIAGNÓSTICO..."
     printf "    ${N_PINK}🧬${NC} %-28s " "Evolution Heuristic"
     $ENGINE --fix-evo | grep "VERIFIED" > /dev/null && echo -e "[ ${M_GREEN}SUCCESS${NC} ]" || echo -e "[ ${C_RED}FAILED${NC} ]"
     
     draw_progress 100; echo -e "\n"
-    echo -e "   ${M_GREEN}✨ SENTINEL OS v11.0: SYSTEM OPERATIONAL${NC}"
+    echo -e "   ${M_GREEN}✨ SENTINEL OS v11.0: SISTEMA OPERATIVO${NC}"
     echo -e "   ${D_GRAY}──────────────────────────────────────────────────────────────${NC}\n"
 
     render_vault
@@ -178,18 +178,18 @@ function execute_genesis() {
 # --- MAIN LOOP ---
 while true; do
     render_header
-    echo -e "   ${N_PINK}╔══════ CONTROL PANEL PADD ═════════════════════════════════╗${NC}"
-    echo -e "     ${M_GREEN}1. ⚡ STARTUP / RESTART (Sentinel v11.0)${NC}"
-    echo -e "     ${E_CYAN}2. 💀 SHUTDOWN SYSTEM (Safe Stop)${NC}"
-    echo -e "     ${Y_GOLD}9. ☣️  FACTORY RESET & CLEANUP${NC}"
+    echo -e "   ${N_PINK}╔══════ PANEL DE CONTROL PADD ═════════════════════════════════╗${NC}"
+    echo -e "     ${M_GREEN}1. ⚡ INICIO / REINICIO (Sentinel v11.0)${NC}"
+    echo -e "     ${E_CYAN}2. 💀 APAGAR SISTEMA (Parada Segura)${NC}"
+    echo -e "     ${Y_GOLD}9. ☣️  LIMPIEZA DE FÁBRICA${NC}"
     echo -e "   ${N_PINK}╚═════════════════════════════════════════════════════════╝${NC}"
     echo ""
-    echo -e "   ${P_PURPLE}📊 [ SYSTEM MONITOR ]${NC}"
-    echo -e "    3. 📡 Resource Monitor (Live)"
-    echo -e "    4. 🔍 Log Auditor"
-    echo -e "    5. 🔐 System Vault (Credentials)"
+    echo -e "   ${P_PURPLE}📊 [ MONITOR DEL SISTEMA ]${NC}"
+    echo -e "    3. 📡 Monitor de Recursos (En Vivo)"
+    echo -e "    4. 🔍 Auditor de Logs"
+    echo -e "    5. 🔐 Bóveda del Sistema (Credenciales)"
     echo ""
-    echo -e "   0. 🚪 Exit"
+    echo -e "   0. 🚪 Salir"
     echo ""
     echo -n -e "   ${M_GREEN}ADMIN@SENTINEL >> ${NC}"
     read opt
@@ -206,7 +206,7 @@ while true; do
         3) 
             while true; do
                 render_header
-                echo -e "   ${BOLD}${E_CYAN}📡 [SYSTEM_MONITOR] // LIVE_RESOURCE_GRID${NC}"
+                echo -e "   ${BOLD}${E_CYAN}📡 [MONITOR_SISTEMA] // REJILLA_RECURSOS_VIVA${NC}"
                 echo -e "   ${D_GRAY}──────────────────────────────────────────────────────────────${NC}"
                 # Task 21: Monitor "Aviónica Pro" con uso de colores
                 docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemPerc}}\t{{.NetIO}}" | grep -E "app_evolution|chatwoot|db_core|cache_core|minio|n8n" | sed 's/^/   /'

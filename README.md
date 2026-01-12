@@ -1,89 +1,89 @@
 
-# ⚡ Sentinel OS v11.0: Enterprise Chatbot Stack
+# 🔱 Sentinel OS v11.0: Arquitectura Enterprise
 
-> **Professional Orchestration for High-Performance Chatbot Systems.**
-> **Standard:** Enterprise Architecture | Scalability | Reliability
+> **"Sencillez Absoluta. Potencia de Precisión. Autoridad Visual."**
+> **Estándar:** Arquitectura Empresarial | Escalabilidad | Fiabilidad
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ Arquitectura del Sistema
 
-Sentinel OS v11.0 provides a robust, containerized environment for managing complex chatbot workflows. It relies on a proven stack of microservices designed for high concurrency and data integrity.
+Sentinel OS v11.0 ofrece un entorno robusto y contenerizado para la orquestación de flujos de chatbot complejos. Se basa en una pila probada de microservicios diseñados para alta concurrencia e integridad de datos.
 
-### 🧩 Component Diagram
+### 🧩 Diagrama de Componentes
 ```mermaid
 graph TD
-    User([User Traffic]) -->|HTTPS| CF[Cloudflare Tunnel]
+    User([Tráfico de Usuario]) -->|HTTPS| CF[Túnel Cloudflare]
     CF -->|Router| API[Evolution API v2]
     
-    subgraph "Core Infrastructure"
-        API -->|Chat Threads| PG[(PostgreSQL 15)]
-        API -->|Job Queue| RD[(Redis Cache)]
-        API -->|Media Storage| S3[(MinIO Object Storage)]
+    subgraph "Infraestructura Core"
+        API -->|Hilos de Chat| PG[(PostgreSQL 15)]
+        API -->|Cola de Trabajos| RD[(Redis Cache)]
+        API -->|Almacenamiento Multimedia| S3[(MinIO Object Storage)]
     end
     
-    subgraph "Business Logic"
-        API -->|Webhooks| N8N[n8n Workflow Engine]
-        N8N -->|CRM Sync| CW[Chatwoot CRM]
+    subgraph "Lógica de Negocio"
+        API -->|Webhooks| N8N[Motor de Flujos n8n]
+        N8N -->|Sincronización CRM| CW[Chatwoot CRM]
         CW -->|Worker Pool| RD
     end
 ```
 
 ---
 
-## 🚀 Key Features
+## 🚀 Características Clave
 
-| Feature | Description | Performance Metric |
+| Característica | Descripción | Métrica de Rendimiento |
 | :--- | :--- | :--- |
-| **High Concurrency** | Optimized Connection Pooling (PgBouncer) | Handles 500+ active connections |
-| **S3 Sovereign Storage** | Self-hosted Object Storage via MinIO | Zero constraints on media size |
-| **Load Balancing** | Sidekiq Worker Tuning | 50 Concurrent Threads for Chatwoot |
-| **Smart Monitoring** | Real-time Resource Hub | Sub-10ms Latency tracking |
-| **Security First** | Vault-based Credential Management | Encrypted visual display |
+| **Alta Concurrencia** | Pooling de Conexiones Optimizado (PgBouncer) | Soporta 500+ conexiones activas |
+| **Almacenamiento S3 Soberano** | Object Storage auto-hospedado vía MinIO | Cero restricciones en tamaño de archivos |
+| **Balanceo de Carga** | Tuning de Sidekiq Workers | 50 Hilos Concurrentes para Chatwoot |
+| **Monitoreo Inteligente** | Hub de Recursos en Tiempo Real | Rastreo de Latencia sub-10ms |
+| **Seguridad Primero** | Gestión de Credenciales tipo Bóveda | Visualización encriptada |
 
 ---
 
-## 🛠️ Usage Guide
+## 🛠️ Guía de Uso
 
-### 1. The Sentinel Control Center
-The system is managed via the `sistema_maestro.sh` interactive terminal.
+### 1. El Centro de Control (Sistema Maestro)
+El sistema se gestiona a través de la terminal interactiva `sistema_maestro.sh`.
 ```bash
 ./sistema_maestro.sh
 ```
 
-### 2. Main Menu Options
-- **1. Start/Restart:** Initiates the full boot sequence with self-diagnosis.
-- **3. Resource Monitor:** Real-time dashboard for CPU/RAM usage of all containers.
-- **4. Log Auditor:** Live stream of logs for debugging application flow.
-- **5. System Vault:** Securely view all API Keys, Passwords, and Access Points.
+### 2. Opciones del Menú Principal
+- **1. Iniciar/Reiniciar:** Inicia la secuencia de arranque completa con auto-diagnóstico.
+- **3. Monitor de Recursos:** Dashboard en tiempo real de uso de CPU/RAM de todos los contenedores.
+- **4. Auditor de Logs:** Streaming en vivo de logs para depurar el flujo de la aplicación.
+- **5. Bóveda del Sistema:** Visualiza de forma segura todas las API Keys, Contraseñas y Puntos de Acceso.
 
 ---
 
-## 📦 Installation & Deployment
+## 📦 Instalación y Despliegue
 
-### Prerequisites
+### Prerrequisitos
 - Docker & Docker Compose
 - Python 3.9+
 - Git
 
-### Quick Start
-1. **Clone Repository:**
+### Inicio Rápido
+1. **Clonar Repositorio:**
    ```bash
    git clone <repo_url>
    cd chatbot-stack
    ```
-2. **Environment Setup:**
-   Ensure `.env` file is populated with valid credentials (see `env.example`).
-3. **Launch:**
-   Execute `./sistema_maestro.sh` and select Option 1.
+2. **Configuración de Entorno:**
+   Asegúrate de que el archivo `.env` esté poblado con credenciales válidas (ver `env.example`).
+3. **Lanzamiento:**
+   Ejecuta `./sistema_maestro.sh` y selecciona la Opción 1.
 
 ---
 
-## 📜 System Integrity Check
-This release (v11.0) has been audited against the **Enterprise Rigor Protocol**, ensuring:
-- **Clean Repository:** Zero unnecessary backup or temporary files.
-- **Secure Configuration:** strict `.gitignore` patterns.
-- **Optimized Performance:** Pre-tuned workers and caching.
+## 📜 Verificación de Integridad
+Esta versión (v11.0) ha sido auditada contra el **Protocolo de Rigor Empresarial**, asegurando:
+- **Repositorio Limpio:** Cero archivos de respaldo innecesarios o temporales.
+- **Configuración Segura:** Patrones estrictos en `.gitignore`.
+- **Rendimiento Optimizado:** Workers y caché pre-ajustados.
 
 ---
-*Maintained by Antigravity AI // Release Date: 2026-01-12*
+*Mantenido por Antigravity AI // Fecha de Lanzamiento: 2026-01-12*
