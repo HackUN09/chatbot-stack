@@ -1,4 +1,4 @@
-# 📔 Sentinel OS v11.0: Manual de Referencia Técnica (God Mode)
+# 📔 Sentinel OS v11.0: Manual de Referencia Técnica (Enterprise Edition)
 
 Este documento es el compendio definitivo de arquitectura, seguridad y operación para el **Sentinel OS Genesis v11.0**. Aquí se detalla la lógica de bajo nivel del sistema.
 

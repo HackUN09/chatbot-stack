@@ -22,7 +22,7 @@ No es un simple script de arranque; es un vigilante de estado que ejecuta el **P
 5.  **Vinculación Súper-Link:** Activa el puente entre Evolution y Chatwoot sin intervención humana.
 
 ### 2. `ops/scripts/sentinel_fixer.py` (Sentinel Brain v11.0)
-El motor de auto-curación ("God Mode") especializado en la integridad de datos:
+El motor de auto-curación especializado en la integridad de datos:
 -   **🛡️ Escudo Anti-Corrupción:** Verifica la integridad estructural del `.env` antes de cada lectura. Si detecta corrupción (código binario/basura), restaura automáticamente desde el último backup (`.env.bak`) o alerta al usuario.
 -   **Sanitización Quirúrgica:** Lee el `.env` en modo seguro, elimina bytes nulos y caracteres invisibles.
 -   **Sincronización de Llaves:** Sincroniza automáticamente `EVOLUTION_API_KEY` con `VITE_EVOLUTION_API_KEY`.

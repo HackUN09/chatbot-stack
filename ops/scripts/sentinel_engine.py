@@ -51,7 +51,7 @@ def get_var(var_name):
     print(ENV.get(var_name, ""))
 
 def fix_evolution():
-    print("🧬 [ EVO_FIX ] Ejecutando Protocolo Heurístico v11.0...")
+    print("🧬 [ EVO_FIX ] Running Heuristic Integrity Check v11.0...")
     ok, res = call_api("/instance/fetchInstances", method="GET")
     if not ok: return print("FAILED_UNREACHABLE")
 
@@ -94,7 +94,7 @@ def setup_s3():
 
 # --- S3 SOVEREIGNTY: MINIO PROVISIONER ---
 def setup_s3_full():
-    print("📦 [ S3_SOVEREIGNTY ] Iniciando MinIO Deep-Core Provisioning...")
+    print("📦 [ S3_CORE ] Initializing MinIO Provisioning...")
     
     # 1. Esperar a que MinIO esté listo
     ready = False
