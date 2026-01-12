@@ -1,36 +1,29 @@
-# --- SECRETS ---
-# --- SECRETS ---
+
+# 🌌 [METADATA] SENTINEL OS v17.0 - REPOSITORIO DE INTEGRIDAD
+# SECCIÓN: IGNORAR ARCHIVOS SENSIBLES EN EL FLUJO CUÁNTICO
+
+# --- CORES ---
 .env
-ops/config/envs/*.env
-!ops/config/envs/.env.example
-!.env.example
-.env.bak
+.env.bak*
+.env.old*
+.env.backup*
+.env.tmp*
+*.env
 
-
-# --- DOCKER DATA & PERSISTENCE ---
+# --- DOCKER & PERSISTENCE ---
 persistence/
-db_core_data/
-cache_core_data/
-minio_data/
-chatwoot_data/
-apps_data/
-node_modules/
-
-# --- BACKUPS & SNAPSHOTS ---
-ops/backups/*.sql
-ops/backups/snapshots/*.zip
+!persistence/.gitkeep
 
 # --- LOGS & DIAGNOSTICS ---
+logs/
 *.log
-*.txt
-ops/docs/ULTIMATE_AUDIT.md
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# --- OS & IDE ---
+# --- OS SPECIFIC ---
 .DS_Store
+Thumbs.db
+.history/
 .vscode/
 .idea/
-Thumbs.db
-
-# --- PYTHON ---
-__pycache__/
-*.py[cod]
