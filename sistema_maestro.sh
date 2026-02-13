@@ -1,250 +1,254 @@
 #!/bin/bash
 
-#  SENTINEL OS - CENTRO DE CONTROL EMPRESARIAL v11.0 
-#  "Sencillez. Estabilidad. Rendimiento."
+# ==============================================================================
+# 🛡️ SENTINEL OS - MASTER ORCHESTRATOR v11.1 (MODULAR NEXUS)
+# ==============================================================================
+# "Zero Dashboard. Infinite Resilience. Total Control."
+# ==============================================================================
 
 # --- SYSTEM CONTEXT ---
-export PYTHONIOENCODING=utf8
 export LC_ALL=C.UTF-8
-
-# --- ENGINE PATH ---
 ENGINE="python ops/scripts/sentinel_engine.py"
+STRESS="python ops/scripts/stress_test_enigma.py"
 
-# --- COLOR PALETTE (PROFESSIONAL) ---
-M_GREEN='\033[38;5;46m'    # Verde Éxito
-N_PINK='\033[38;5;198m'     # Nequi Neon Pink
-E_CYAN='\033[38;5;51m'      # Electric Cyan
-P_PURPLE='\033[38;5;129m'   # Power Purple
-Y_GOLD='\033[38;5;226m'     # Cyber Gold
-D_GRAY='\033[38;5;240m'     # Dark Gray
-C_WHITE='\033[1;37m'        # Pure White
-NC='\033[0m'                # No Color
-BOLD='\033[1m'
+# --- ENV NEXUS RECONCILIATION ---
+if [ ! -f .env ]; then
+    echo -e "${R}[!] ERROR: .env no encontrado.${NC}"
+    echo -e "${Y}[!] Por favor, crea un archivo .env basado en .env.example con tus credenciales reales.${NC}"
+    exit 1
+fi
+
+# Cargar variables para que Docker Compose no de advertencias
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
+# --- COLOR PALETTE (PROFESSIONAL HIGHLIGHTS) ---
+G='\033[38;5;46m'    # Success Green
+R='\033[38;5;196m'   # Alert Red
+B='\033[38;5;51m'    # Electric Cyan
+P='\033[38;5;129m'   # Power Purple
+Y='\033[38;5;226m'   # Warning Gold
+D='\033[38;5;240m'   # Muted Gray
+W='\033[1;37m'       # Pure White
+NC='\033[0m'         # Reset
 
 # --- UI COMPONENTS ---
 function render_header() {
     clear
-    echo -e "${M_GREEN}"
-    echo "   ███╗   ███╗ █████╗ ████████╗██████╗ ██╗██╗  ██╗"
-    echo "   ████╗ ████║██╔══██╗╚══██╔══╝██╔══██╗██║╚██╗██╔╝"
-    echo "   ██╔████╔██║███████║   ██║   ██████╔╝██║ ╚███╔╝ "
-    echo "   ██║╚██╔╝██║██╔══██║   ██║   ██╔══██╗██║ ██╔██╗ "
-    echo "   ██║ ╚═╝ ██║██║  ██║   ██║   ██║  ██║██║██╔╝ ██╗"
-    echo "   ╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝"
-    echo -e "   ${N_PINK}─── SENTINEL OS // v11.0 // EDICIÓN EMPRESARIAL ───${NC}"
-    echo -e "   ${D_GRAY}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${P}"
+    echo "    ███████╗███████╗███╗   ██╗████████╗██╗███╗   ██╗███████╗██╗     "
+    echo "    ██╔════╝██╔════╝████╗  ██║╚══██╔══╝██║████╗  ██║██╔════╝██║     "
+    echo "    ███████╗█████╗  ██╔██╗ ██║   ██║   ██║██╔██╗ ██║█████╗  ██║     "
+    echo "    ╚════██║██╔══╝  ██║╚██╗██║   ██║   ██║██║╚██╗██║██╔══╝  ██║     "
+    echo "    ███████║███████╗██║ ╚████║   ██║   ██║██║ ╚████║███████╗███████╗"
+    echo "    ╚══════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝╚═╝  ╚═══╝╚══════╝╚══════╝"
+    echo -e "    ${B}─── SENTINEL OS // MODULAR NEXUS // ORQUESTADOR v11.1 ───${NC}"
+    echo -e "    ${D}════════════════════════════════════════════════════════════════${NC}"
 }
+
+function tag() { echo -e "  ${P}[$1]${NC} ${W}$2${NC}"; }
 
 function draw_progress() {
     local val=$1
     local width=40
     local filled=$(( val * width / 100 ))
     local empty=$(( width - filled ))
-    printf "   ${E_CYAN}[${NC}"
-    for ((i=0; i<filled; i++)); do printf "${M_GREEN}█${NC}"; done
-    for ((i=0; i<empty; i++)); do printf "${D_GRAY}░${NC}"; done
-    printf "${E_CYAN}]${NC} ${BOLD}${N_PINK}%d%%${NC}" "$val"
+    printf "    ${B}[${NC}"
+    for ((i=0; i<filled; i++)); do printf "${G}█${NC}"; done
+    for ((i=0; i<empty; i++)); do printf "${D}░${NC}"; done
+    printf "${B}]${NC} ${G}%d%%${NC}\n" "$val"
 }
 
-function step_msg() {
-    local icon=$1
-    local msg=$2
-    echo -e "   ${P_PURPLE}${icon}${NC} ${C_WHITE}${msg}${NC}"
-}
-
+# --- CORE LOGIC ---
 function check_node() {
-    local label=$1
+    local name=$1
     local url=$2
-    local header=$3
-    printf "    ${E_CYAN}➤${NC} %-26s " "${label}"
-    local code=$(curl.exe -s -o /dev/null -w "%{http_code}" --max-time 4 ${header:+ -H "$header"} "$url")
-    if [[ "$code" == "200" || "$code" == "401" || "$code" == "301" || "$code" == "302" ]]; then
-        echo -e "[ ${M_GREEN}ACTIVE-SYNC${NC} ] (${code})"
-        return 0
-    fi
-    echo -e "[ ${C_RED}BREACHED${NC} ] (${code})"
-    return 1
-}
-
-# --- SYSTEM VAULT: CONFIGURATION (DEEP_CORE) ---
-function render_vault() {
-    local pg_pass=$($ENGINE --get POSTGRES_ROOT_PASSWORD)
-    local rd_p=$($ENGINE --get REDIS_PASSWORD)
-    local mn_u=$($ENGINE --get MINIO_ROOT_USER)
-    local mn_p=$($ENGINE --get MINIO_ROOT_PASSWORD)
-    local ev_k=$($ENGINE --get EVOLUTION_API_KEY)
-    local domain=$($ENGINE --get DOMAIN)
-
-    local cw_p=$($ENGINE --get CHATWOOT_DB_PASSWORD)
-    local n8n_p=$($ENGINE --get N8N_DB_PASSWORD)
-    local n8n_k=$($ENGINE --get N8N_ENCRYPTION_KEY)
-    
-    echo -e "   ${BOLD}${N_PINK}╔══════════════ BÓVEDA DEL SISTEMA v11.0 // CONFIGURACIÓN ══════════════════════╗${NC}"
-    echo -e "    ${E_CYAN}■ ALMACENAMIENTO S3 (MINIO)${NC}"
-    echo -e "    │  ${M_GREEN}📦 evolution-media  :${NC} [ READY ]  ${M_GREEN}📦 chatwoot-storage :${NC} [ READY ]"
-    echo -e "    │  ${M_GREEN}🔑 ACCESS_KEY      :${NC} ${mn_u}      ${M_GREEN}🗝️  SECRET_KEY      :${NC} ${mn_p}"
-    echo -e "    ${D_GRAY}├───────────────────────────────────────────────────────────────────${NC}"
-    echo -e "    ${E_CYAN}■ NEURAL INFRASTRUCTURE (CORE)${NC}"
-    printf "    │  ${M_GREEN}🐘 DB_ROOT :${NC} %s\n" "${pg_pass}"
-    printf "    │  ${M_GREEN}🧠 RD_PASS :${NC} %s\n" "${rd_p}"
-    printf "    │  ${N_PINK}🧬 EVO_KEY :${NC} %s\n" "${ev_k}"
-    echo -e "    ${D_GRAY}├───────────────────────────────────────────────────────────────────${NC}"
-    echo -e "    ${E_CYAN}■ APP CREDENTIALS${NC}"
-    printf "    │  ${M_GREEN}💬 CHATWOOT DB :${NC} %s\n" "${cw_p}"
-    printf "    │  ${M_GREEN}🔗 N8N DB      :${NC} %s\n" "${n8n_p}"
-    printf "    │  ${M_GREEN}🔐 N8N KEY     :${NC} %s\n" "${n8n_k}"
-    echo -e "    ${D_GRAY}├───────────────────────────────────────────────────────────────────${NC}"
-    echo -e "    ${E_CYAN}■ ADMIN GATEWAYS (LATENCY: <10ms)${NC}"
-    printf "    │  ${Y_GOLD}🐘 pgAdmin :${NC} :5050  ${Y_GOLD}🧠 RedisInsight:${NC} :5540  ${Y_GOLD}📦 MinIO:${NC} :9001\n"
-    echo -e "    ${D_GRAY}├───────────────────────────────────────────────────────────────────${NC}"
-    echo -e "    ${E_CYAN}■ ACCESS POINTS (CLICKABLE)${NC}"
-    if [ -n "$domain" ]; then
-        echo -e "    │  ${M_GREEN}🚀 Evolution API :${NC} https://api.${domain}/manager"
-        echo -e "    │  ${M_GREEN}💬 Chatwoot      :${NC} https://chat.${domain}"
-        echo -e "    │  ${M_GREEN}🔗 n8n Workflow  :${NC} https://n8n.${domain}"
-        echo -e "    │  ${Y_GOLD}📦 MinIO Console :${NC} https://s3.${domain}"
+    printf "    ${D}➤${NC} %-25s " "$name"
+    local status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 "$url")
+    if [[ "$status" =~ ^(200|301|302|401)$ ]]; then
+        echo -e "[ ${G}ONLINE${NC} ] (${status})"
     else
-        echo -e "    │  ${M_GREEN}🚀 Evolution API :${NC} http://localhost:8080/manager"
-        echo -e "    │  ${M_GREEN}💬 Chatwoot      :${NC} http://localhost:3000"
-        echo -e "    │  ${M_GREEN}🔗 n8n Workflow  :${NC} http://localhost:5678"
+        echo -e "[ ${R}OFFLINE${NC} ] (${status})"
     fi
-    echo -e "    │  ${Y_GOLD}🐘 pgAdmin       :${NC} http://localhost:5050"
-    echo -e "    │  ${Y_GOLD}🧠 RedisInsight  :${NC} http://localhost:5540"
-    echo -e "   ${BOLD}${N_PINK}╚═════════════════════════════════════════════════════════════════════╝${NC}"
 }
 
-# --- MASTER SEQUENCE ---
+function render_access_dashboard() {
+    local domain=$(grep "DOMAIN=" .env | cut -d'=' -f2)
+    echo -e "\n  ${P}┌──────────────────────────────────────────────────────────────┐${NC}"
+    echo -e "  ${P}│${NC}  ${W}🛡️  OMEGA VAULT - DEPLOYMENT COMPLETE                       ${P}│${NC}"
+    echo -e "  ${P}└──────────────────────────────────────────────────────────────┘${NC}"
+    echo -e "  ${B}  ➤ FRONTEND ACCESS CENTERS:${NC}"
+    echo -e "    ${D}•${NC} ${G}Chatwoot CRM:${NC}    ${W}https://chat.${domain}${NC}"
+    echo -e "    ${D}•${NC} ${G}Evolution API:${NC}   ${W}https://api.${domain}${NC}"
+    echo -e "    ${D}•${NC} ${G}n8n Workflows:${NC}   ${W}https://n8n.${domain}${NC}"
+    echo -e "    ${D}•${NC} ${G}MinIO Storage:${NC}   ${W}http://localhost:9001${NC}"
+    echo -e "    ${D}•${NC} ${G}pgAdmin Panel:${NC}   ${W}http://localhost:5050${NC}"
+    echo -e "    ${D}•${NC} ${G}Redis Insight:${NC}   ${W}http://localhost:5540${NC}"
+    echo -e "\n  ${B}  ➤ CREDENCIALES POR SERVICIO (OMEGA VAULT):${NC}"
+    echo -e "\n    ${P}━━━ CHATWOOT CRM ━━━${NC}"
+    echo -e "    ${D}•${NC} ${Y}Usuario:${NC}      ${W}$($ENGINE --get CHATWOOT_ADMIN_EMAIL)${NC}"
+    echo -e "    ${D}•${NC} ${Y}Contraseña:${NC}   ${W}$($ENGINE --get CHATWOOT_ADMIN_PASSWORD)${NC}"
+    echo -e "    ${D}•${NC} ${Y}Token API:${NC}    ${W}$($ENGINE --get CHATWOOT_GLOBAL_TOKEN)${NC}"
+    echo -e "\n    ${P}━━━ EVOLUTION API ━━━${NC}"
+    echo -e "    ${D}•${NC} ${Y}API Key:${NC}      ${W}$($ENGINE --get EVOLUTION_API_KEY)${NC}"
+    echo -e "    ${D}•${NC} ${D}(Autenticación vía Header 'apikey')${NC}"
+    echo -e "\n    ${P}━━━ N8N WORKFLOWS ━━━${NC}"
+    echo -e "    ${D}•${NC} ${Y}Usuario:${NC}      ${W}$($ENGINE --get CHATWOOT_ADMIN_EMAIL)${NC}"
+    echo -e "    ${D}•${NC} ${Y}Contraseña:${NC}   ${W}$($ENGINE --get CHATWOOT_ADMIN_PASSWORD)${NC}"
+    echo -e "\n    ${P}━━━ MINIO S3 STORAGE ━━━${NC}"
+    echo -e "    ${D}•${NC} ${Y}Usuario:${NC}      ${W}minioadmin${NC}"
+    echo -e "    ${D}•${NC} ${Y}Contraseña:${NC}   ${W}$($ENGINE --get MINIO_ROOT_PASSWORD)${NC}"
+    echo -e "    ${D}•${NC} ${D}(Acceso Web Console: http://localhost:9001)${NC}"
+    echo -e "\n    ${P}━━━ PGADMIN PANEL ━━━${NC}"
+    echo -e "    ${D}•${NC} ${Y}Usuario:${NC}      ${W}$($ENGINE --get PGADMIN_DEFAULT_EMAIL)${NC}"
+    echo -e "    ${D}•${NC} ${Y}Contraseña:${NC}   ${W}$($ENGINE --get PGADMIN_DEFAULT_PASSWORD)${NC}"
+    echo -e "\n    ${P}━━━ CREDENCIALES DE INFRAESTRUCTURA ━━━${NC}"
+    echo -e "    ${D}•${NC} ${B}PostgreSQL Root:${NC}  ${W}$($ENGINE --get POSTGRES_ROOT_PASSWORD)${NC}"
+    echo -e "    ${D}•${NC} ${B}Redis Password:${NC}   ${W}$($ENGINE --get REDIS_PASSWORD)${NC}"
+    echo -e "  ${P}────────────────────────────────────────────────────────────────${NC}"
+}
+
 function execute_genesis() {
     render_header
-    echo -e "   ${BOLD}${Y_GOLD}🚀 [BOOT_SEQUENCE] INICIANDO SENTINEL v11.0${NC}"
+    tag "GENESIS" "Iniciando Despliegue Modular Seguro (Multimedia Ready)..."
     
-    # Micro-simulación de carga
-    local steps=("INICIALIZANDO_CONTROLADORES" "CARGANDO_BUFFERS_CONFIG" "SINCRONIZANDO_MALLA_SERVICIOS" "SISTEMA_LISTO")
-    for step in "${steps[@]}"; do
-        printf "   ${D_GRAY}>>${NC} %-30s " "$step"
-        sleep 0.3
-        echo -e "[ ${M_GREEN}OK${NC} ]"
-    done
-    echo ""
-    draw_progress 5; echo -e "\n"
+    # 0. Red de Seguridad (Global para módulos)
+    docker network create secure-net 2>/dev/null || true
+    tag "NET" "Red secure-net garantizada."
 
-    # FASE 01: Infra
-    step_msg "📦" "INICIANDO NÚCLEO DE INFRAESTRUCTURA..."
-    docker compose -f modules/01-infra/docker-compose.yml --env-file .env up -d > /dev/null 2>&1
-    sleep 3
-    draw_progress 35; echo -e "\n"
+    # 1. Capa de Infraestructura (01-infra)
+    tag "INFRA" "Levantando Base de Datos, Cache y Almacenamiento..."
+    docker compose --env-file .env -f modules/01-infra/docker-compose.yml up -d
+    draw_progress 30
     
-    printf "    ${E_CYAN}➤${NC} %-28s " "PostgreSQL Hub"
-    docker exec db_core pg_isready -U root_admin > /dev/null 2>&1 && echo -e "[ ${M_GREEN}ACTIVE${NC} ]" || echo -e "[ ${C_RED}ERROR${NC} ]"
+    # 2. DB User Check (Essential)
+    tag "FIX" "Garantizando integridad de usuarios de Base de Datos..."
+    $ENGINE --fix-db
     
-    local rd_p=$($ENGINE --get REDIS_PASSWORD)
-    printf "    ${E_CYAN}➤${NC} %-28s " "Redis Neural Node"
-    docker exec cache_core redis-cli -a "$rd_p" ping 2>/dev/null | grep PONG > /dev/null 2>&1 && echo -e "[ ${M_GREEN}PONG${NC} ]" || echo -e "[ ${C_RED}FAIL${NC} ]"
-    echo ""
-
-    # FASE 02: Apps
-    step_msg "⚡" "DESPLEGANDO CAPA DE APLICACIÓN..."
-    docker compose -f modules/02-apps/docker-compose.yml --env-file .env up -d > /dev/null 2>&1
-    draw_progress 70; echo -e "\n"
-    sleep 12
-    check_node "Evolution API Master" "http://localhost:8080/instance/fetchInstances" "apikey: $($ENGINE --get EVOLUTION_API_KEY)"
-    check_node "Chatwoot CRM Console" "http://localhost:3000"
-    echo ""
-
-    # FASE 03: Tunnel
-    step_msg "🚇" "ESTABLECIENDO TÚNEL SEGURO..."
-    docker compose -f modules/03-tunnel/docker-compose.yml --env-file .env up -d > /dev/null 2>&1
-    draw_progress 90; echo -e "\n"
-    echo -e "    ${E_CYAN}➤${NC} Tunnel Node: ${M_GREEN}ACTIVE-SHIELD${NC}"
-    echo ""
-
-    # FASE 04: Integrity (S3 Check)
-    step_msg "🧬" "VERIFICANDO SUBSISTEMA DE ALMACENAMIENTO..."
-    $ENGINE --setup-s3 | grep "VERIFIED" > /dev/null && echo -e "    ${M_GREEN}➤ BUCKETS_PROVISIONADOS: ÉXITO${NC}" || echo -e "    ${C_RED}➤ FALLO_S3: REVISAR MINIO${NC}"
+    # 3. Capa de Aplicaciones (02-apps)
+    tag "APPS" "Levantando Aplicaciones (Chatwoot, Evolution, n8n)..."
+    docker compose --env-file .env -f modules/02-apps/docker-compose.yml up -d
+    draw_progress 70
     
-    step_msg "🔐" "EJECUTANDO AUTO-DIAGNÓSTICO..."
-    printf "    ${N_PINK}🧬${NC} %-28s " "Evolution Heuristic"
-    $ENGINE --fix-evo | grep "VERIFIED" > /dev/null && echo -e "[ ${M_GREEN}SUCCESS${NC} ]" || echo -e "[ ${C_RED}FAILED${NC} ]"
+    # 4. Capa de Túnel (03-tunnel)
+    tag "TUNNEL" "Abriendo puente seguro con Cloudflare..."
+    docker compose --env-file .env -f modules/03-tunnel/docker-compose.yml up -d
+    draw_progress 100
     
-    draw_progress 100; echo -e "\n"
-    echo -e "   ${M_GREEN}✨ SENTINEL OS v11.0: SISTEMA OPERATIVO${NC}"
-    echo -e "   ${D_GRAY}──────────────────────────────────────────────────────────────${NC}\n"
-
-    render_vault
-    echo ""
-    read -p "   Presiona ENTER para volver al Hub de Poder..."
+    echo -e "\n  ${G}✨ SISTEMA MODULAR DESPLEGADO.${NC}"
+    echo -e "  ${Y}[INFO] Arquitectura profesional restaurada.${NC}"
+    
+    render_access_dashboard
+    
+    echo -e "\n"
+    read -p "  Presiona ENTER para volver..."
 }
 
-# --- MAIN LOOP ---
+# --- MAIN MENU ---
 while true; do
     render_header
-    echo -e "   ${N_PINK}╔══════ PANEL DE CONTROL PADD ═════════════════════════════════╗${NC}"
-    echo -e "     ${M_GREEN}1. ⚡ INICIO / REINICIO (Sentinel v11.0)${NC}"
-    echo -e "     ${E_CYAN}2. 💀 APAGAR SISTEMA (Parada Segura)${NC}"
-    echo -e "     ${Y_GOLD}9. ☣️  LIMPIEZA DE FÁBRICA${NC}"
-    echo -e "   ${N_PINK}╚═════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    echo -e "   ${P_PURPLE}📊 [ MONITOR DEL SISTEMA ]${NC}"
-    echo -e "    3. 📡 Monitor de Recursos (En Vivo)"
-    echo -e "    4. 🔍 Auditor de Logs"
-    echo -e "    5. 🔐 Bóveda del Sistema (Credenciales)"
-    echo ""
-    echo -e "   0. 🚪 Salir"
-    echo ""
-    echo -n -e "   ${M_GREEN}ADMIN@SENTINEL >> ${NC}"
+    echo -e "  ${P}╔═══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "  ${P}║${NC}  ${B}⚡ SISTEMA OPERATIVO DISPONIBLE${NC}                              ${P}║${NC}"
+    echo -e "  ${P}╠═══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${P}║${NC}                                                               ${P}║${NC}"
+    echo -e "  ${P}║${NC}  ${B}[1]${NC} ${W}▸ DEPLOY STACK${NC}          ${D}Infraestructura + Apps${NC}       ${P}║${NC}"
+    echo -e "  ${P}║${NC}      ${D}└─ Levanta Docker, DB Fix, Dashboard${NC}                ${P}║${NC}"
+    echo -e "  ${P}║${NC}                                                               ${P}║${NC}"
+    echo -e "  ${P}╠───────────────────────────────────────────────────────────────╣${NC}"
+    echo -e "  ${P}║${NC}  ${G}[2]${NC} ${W}▸ AEGIS SENSORS${NC}         ${D}Monitor en Tiempo Real${NC}       ${P}║${NC}"
+    echo -e "  ${P}║${NC}  ${Y}[3]${NC} ${W}▸ CIPHER VAULT${NC}          ${D}Credenciales Master${NC}          ${P}║${NC}"
+    echo -e "  ${P}║${NC}  ${D}[4]${NC} ${W}▸ REPAIR & SYNC${NC}         ${D}DB/Buckets/Evolution${NC}         ${P}║${NC}"
+    echo -e "  ${P}║${NC}  ${B}[5]${NC} ${W}▸ STRESS TEST${NC}           ${D}Pruebas de Carga${NC}             ${P}║${NC}"
+    echo -e "  ${P}║${NC}  ${D}[6]${NC} ${W}▸ LIVE LOGS${NC}             ${D}Stream en Vivo${NC}               ${P}║${NC}"
+    echo -e "  ${P}║${NC}  ${R}[7]${NC} ${W}▸ SYSTEM SHUTDOWN${NC}       ${D}Apagar Todo${NC}                  ${P}║${NC}"
+    echo -e "  ${P}║${NC}                                                               ${P}║${NC}"
+    echo -e "  ${P}╠───────────────────────────────────────────────────────────────╣${NC}"
+    echo -e "  ${P}║${NC}  ${R}[9]${NC} ${W}▸ FACTORY RESET${NC}         ${D}⚠️  Borrado Nuclear${NC}           ${P}║${NC}"
+    echo -e "  ${P}║${NC}  ${W}[0]${NC} ${W}▸ EXIT${NC}                  ${D}Salir del Sistema${NC}            ${P}║${NC}"
+    echo -e "  ${P}║${NC}                                                               ${P}║${NC}"
+    echo -e "  ${P}╚═══════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "\n  ${B}┌─[${P}SENTINEL${B}@${P}ADMIN${B}]${NC}"
+    echo -e "  ${B}└──▸${NC} \c"
     read opt
 
     case $opt in
         1) execute_genesis ;;
-        2) 
-            docker compose -f modules/03-tunnel/docker-compose.yml down > /dev/null 2>&1
-            docker compose -f modules/02-apps/docker-compose.yml down > /dev/null 2>&1
-            docker compose -f modules/01-infra/docker-compose.yml down > /dev/null 2>&1
-            echo -e "   ${M_GREEN}Desconexión Segura.${NC}"
-            sleep 1
-            ;;
-        3) 
+        2)
             while true; do
                 render_header
-                echo -e "   ${BOLD}${E_CYAN}📡 [MONITOR_SISTEMA] // REJILLA_RECURSOS_VIVA${NC}"
-                echo -e "   ${D_GRAY}──────────────────────────────────────────────────────────────${NC}"
-                # Task 21: Monitor "Aviónica Pro" con uso de colores
-                docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemPerc}}\t{{.NetIO}}" | grep -E "app_evolution|chatwoot|db_core|cache_core|minio|n8n" | sed 's/^/   /'
-                echo ""
-                echo -e "   ${BOLD}${N_PINK}■ CONCURRENCY_LOAD:${NC} $[RANDOM%15+5]%  ${BOLD}${M_GREEN}■ SYSTEM_STATUS:${NC} OPTIMAL"
-                echo -e "   ${D_GRAY}──────────────────────────────────────────────────────────────${NC}"
-                echo -e "   ${C_WHITE}[R] Refresh  [Q] Menu Inicio${NC}"
-                read -n 1 -s k
-                [[ $k == "q" ]] && break
+                tag "SENSORS" "Monitoría de Aviónica en Vivo"
+                echo -e "  ${D}────────────────────────────────────────────────────────────────${NC}"
+                check_node "Evolution API Master" "http://localhost:8080"
+                check_node "Chatwoot CRM" "http://localhost:3000"
+                check_node "n8n Engine" "http://localhost:5678"
+                check_node "MinIO S3" "http://localhost:9000"
+                echo -e "  ${D}────────────────────────────────────────────────────────────────${NC}"
+                docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}" | grep -E "app_|chatwoot|db_|cache_|minio"
+                echo -e "\n  ${W}[Q] Volver${NC}"
+                read -n 1 -s k; [[ $k == "q" ]] && break
             done
             ;;
-        4) 
+        3)
             render_header
-            echo -e "   ${BOLD}${P_PURPLE}🔍 [MULTI_LOG_STREAM] SELECCIONA LOS NODOS A MONITOREAR${NC}"
-            echo -e "    1) Full Stack (Apps + Infra)  2) Solo Apps  3) Solo Infra  0) Back"
-            read -p "   >> " l
-            case $l in
-                1) docker compose -f modules/01-infra/docker-compose.yml -f modules/02-apps/docker-compose.yml logs -f --tail=100 ;;
-                2) docker compose -f modules/02-apps/docker-compose.yml logs -f --tail=100 ;;
-                3) docker compose -f modules/01-infra/docker-compose.yml logs -f --tail=100 ;;
-            esac
+            tag "VAULT" "Acceso Maestro a Secretos de Red"
+            echo -e "  ${D}────────────────────────────────────────────────────────────────${NC}"
+            echo -e "  ${G}DB_ROOT_PASS:${NC} $($ENGINE --get POSTGRES_ROOT_PASSWORD)"
+            echo -e "  ${G}REDIS_PASS:  ${NC} $($ENGINE --get REDIS_PASSWORD)"
+            echo -e "  ${G}MINIO_PASS:  ${NC} $($ENGINE --get MINIO_ROOT_PASSWORD)"
+            echo -e "  ${B}EVO_API_KEY: ${NC} $($ENGINE --get EVOLUTION_API_KEY)"
+            echo -e "  ${D}────────────────────────────────────────────────────────────────${NC}"
+            read -p "  Enter para cerrar bóveda..."
             ;;
-        5) render_header; render_vault; echo ""; read -p "   Enter para bloquear..." ;;
-        9) 
-            echo -e "${C_RED}¿REINICIAR TODO & PURGAR CÓDIGO? (Escribe 'BORRAR')${NC}"
-            read -p ">> " confirm
-            if [[ "$confirm" == "BORRAR" ]]; then
-                docker compose -f modules/03-tunnel/docker-compose.yml down -v > /dev/null 2>&1
-                docker compose -f modules/02-apps/docker-compose.yml down -v > /dev/null 2>&1
-                docker compose -f modules/01-infra/docker-compose.yml down -v > /dev/null 2>&1
-                docker system prune -af --volumes > /dev/null 2>&1
-                # PURGA DE SCRIPTS
-                cd ops/scripts
-                rm binary_cleaner.py compare_keys.py env_generator.py env_integrator.py env_reconstructor.py fix_minio_n8n_v2.py generate_secrets.py genesis_snapshot.py restore_passwords.py sync_secrets.py system_audit.py upgrade_env.py force_evo_config.py setup_minio_ultimate.py get_env_var.py 2>/dev/null
-                cd ../..
-                execute_genesis
+        4)
+            render_header
+            tag "NEXUS" "Forzando Sincronización de Estado..."
+            $ENGINE --fix-db
+            $ENGINE --setup-s3
+            $ENGINE --fix-evo
+            echo -e "  ${G}Nexus Sincronizado.${NC}"
+            echo -e "\n"
+            read -p "  Presiona ENTER para volver..."
+            ;;
+        5)
+            render_header
+            tag "STRESS" "Iniciando Aegis Stress Engine (Enigma)..."
+            $STRESS
+            read -p "  Enter para volver..."
+            ;;
+        6)
+            render_header
+            tag "LOGS" "Streaming de Auditoría (CTRL+C para salir)..."
+            docker compose -f modules/01-infra/docker-compose.yml -f modules/02-apps/docker-compose.yml -f modules/03-tunnel/docker-compose.yml logs -f --tail=100
+            ;;
+        7)
+            render_header
+            tag "SHUTDOWN" "Desconectando nodos de la red..."
+            docker compose -f modules/01-infra/docker-compose.yml -f modules/02-apps/docker-compose.yml -f modules/03-tunnel/docker-compose.yml down
+            echo -e "  ${G}Sistema apagado correctamente.${NC}"
+            echo -e "\n"
+            read -p "  Presiona ENTER para volver..."
+            ;;
+        9)
+            echo -e "  ${R}⚠️  ALERTA DE PURGA NUCLEAR: Se borrarán TODOS los datos (Docker + Persistencia Local). Escribe 'PURGAR'${NC}"
+            read -p "  >> " confirm
+            if [[ "$confirm" == "PURGAR" ]]; then
+                tag "PURGE" "Iniciando Protocolo de Limpieza Nuclear..."
+                
+                # Ejecutar script de limpieza especializado
+                bash ops/scripts/clean-docker.sh
+                
+                echo -e "  ${Y}[LIMPIEZA] Eliminando datos de persistencia local...${NC}"
+                rm -rf persistence/*
+                
+                # Re-create empty persistence folders
+                mkdir -p persistence/postgres persistence/redis persistence/minio persistence/n8n persistence/evolution persistence/pgadmin
+                
+                echo -e "  ${G}✅ Purga Completada. El sistema modular está como un lienzo en blanco.${NC}"
+                echo -e "\n"
+                read -p "  Presiona ENTER para volver..."
             fi
             ;;
-        0) clear; exit 0 ;;
+        0) exit 0 ;;
     esac
 done

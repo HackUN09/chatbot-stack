@@ -1,95 +1,191 @@
+# 🌌 Sentinel OS v11.0 | Isekai Stack
+> **Infraestructura conversacional empresarial autoreparable**  
+> Chatwoot CRM + Evolution API + n8n + MinIO S3 = Omnicanalidad absoluta
 
-# ⚡ Sentinel OS v11.0: Arquitectura Enterprise 🚀
+[![Version](https://img.shields.io/badge/Version-v11.0-blue?style=for-the-badge&logo=semantic-release)](https://github.com/HackUN09/chatbot-stack)
+[![Status](https://img.shields.io/badge/Status-Production_Ready-00ff00?style=for-the-badge&logo=statuspage)](https://chat.isekaichat.com)
+[![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge&logo=open-source-initiative)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-Required-2496ED?style=for-the-badge&logo=docker)](https://www.docker.com/)
 
-![Version](https://img.shields.io/badge/version-v11.0-blueviolet?style=for-the-badge&logo=appveyor)
-![Status](https://img.shields.io/badge/status-OPERATIONAL-success?style=for-the-badge&logo=server)
-![Security](https://img.shields.io/badge/security-ENTERPRISE-blue?style=for-the-badge&logo=windows-terminal)
-![License](https://img.shields.io/badge/license-MIT-yellow?style=for-the-badge)
+---
 
-> **"Sencillez Absoluta. Potencia de Precisión. Autoridad Visual."**
->
-> 💎 **Estándar:** Arquitectura Empresarial | 📈 Escalabilidad | 🛡️ Fiabilidad
+## 🎯 ¿Qué es Sentinel OS?
+
+**Sentinel OS** no es solo un conjunto de Docker containers. Es un **ecosistema autosuficiente, autoreparable y modular** diseñado para:
+
+- ✅ Gestionar conversaciones de **WhatsApp Business** a escala empresarial
+- ✅ Centralizar atención al cliente en un solo CRM (Chatwoot)
+- ✅ Automatizar respuestas y workflows con IA (n8n)
+- ✅ Almacenar multimedia deduplicada en S3 (MinIO)
+- ✅ Mantener seguridad **Zero-Trust** con Cloudflare Tunnel
+
+---
+
+## 🛠️ Stack Tecnológico
+
+| Servicio | Versión | Propósito | Puerto |
+|:---------|:--------|:----------|:-------|
+| **Chatwoot** | v3.12.0 | CRM & Live Chat | 3000 |
+| **Evolution API** | v2.3.7 | Gateway WhatsApp | 8080 |
+| **n8n** | v1.76.1 | Automatización de workflows | 5678 |
+| **PostgreSQL** | 16.6-alpine | Base de datos relacional | 5432 |
+| **Redis** | 7.4-alpine | Cache & Queue | 6379 |
+| **MinIO** | latest | S3-compatible storage | 9000 |
+| **Cloudflare Tunnel** | latest | Proxy seguro Zero-Trust | - |
 
 ---
 
 ## 🏗️ Arquitectura del Sistema
 
-**Sentinel OS v11.0** ofrece un entorno robusto y contenerizado para la orquestación de flujos de chatbot complejos. Se basa en una pila probada de microservicios diseñados para **alta concurrencia** e **integridad de datos**.
-
-### 🧩 Diagrama de Componentes
 ```mermaid
 graph TD
-    User([🚦 Tráfico de Usuario]) -->|HTTPS| CF[☁️ Túnel Cloudflare]
-    CF -->|Router| API[🚀 Evolution API v2]
+    A[👤 Usuario Final WhatsApp] -->|HTTPS| B[Cloudflare Tunnel]
+    B -->|Secure Route| C{Sentinel Maestro}
     
-    subgraph "Infraestructura Core"
-        API -->|Hilos de Chat| PG[(🐘 PostgreSQL 15)]
-        API -->|Cola de Trabajos| RD[(🧠 Redis Cache)]
-        API -->|Almacenamiento Multimedia| S3[(📦 MinIO Object Storage)]
-    end
+    C -->|Port 8080| D[Evolution API v2.3.7]
+    C -->|Port 3000| E[Chatwoot CRM v3.12]
+    C -->|Port 5678| F[n8n Automation]
+    C -->|Port 9000| G[MinIO S3 Storage]
     
-    subgraph "Lógica de Negocio"
-        API -->|Webhooks| N8N[🔗 Motor de Flujos n8n]
-        N8N -->|Sincronización CRM| CW[💬 Chatwoot CRM]
-        CW -->|Worker Pool| RD
-    end
+    D -.->|Super-Link| E
+    D -.->|Webhooks| F
+    F -.->|API Calls| E
+    
+    E -->|SQL| H[(PostgreSQL 16)]
+    D -->|SQL| H
+    F -->|SQL| H
+    
+    E -->|Cache| I[(Redis 7)]
+    D -->|Cache| I
+    
+    D -->|Media Storage| G
+    E -->|Media Storage| G
+    
+    style A fill:#ff6b9d,stroke:#333,stroke-width:2px,color:#fff
+    style B fill:#f38020,stroke:#333,stroke-width:2px
+    style C fill:#7c3aed,stroke:#333,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#333,stroke-width:2px
+    style E fill:#3b82f6,stroke:#333,stroke-width:2px
+    style F fill:#ec4899,stroke:#333,stroke-width:2px
 ```
 
 ---
 
-## 🚀 Características Clave
+## ⚡ Quick Start
 
-| 🌟 Característica | 📝 Descripción | ⚡ Métrica de Rendimiento |
-| :--- | :--- | :--- |
-| **🏎️ Alta Concurrencia** | Pooling de Conexiones Optimizado (PgBouncer) | Soporta **500+ conexiones activas** |
-| **📦 Almacenamiento Soberano** | Object Storage auto-hospedado vía MinIO | **Cero restricciones** en tamaño de archivos |
-| **⚖️ Balanceo de Carga** | Tuning de Sidekiq Workers | **50 Hilos Concurrentes** para Chatwoot |
-| **📡 Monitoreo Inteligente** | Hub de Recursos en Tiempo Real | Rastreo de Latencia **sub-10ms** |
-| **🔐 Seguridad Primero** | Gestión de Credenciales tipo Bóveda | Visualización **encriptada** |
+### 1. Clonar el Repositorio
 
----
+```bash
+git clone https://github.com/HackUN09/chatbot-stack.git
+cd chatbot-stack
+```
 
-## 🛠️ Guía de Uso
+### 2. Configurar Secretos
 
-### 1. 🎛️ El Centro de Control (Sistema Maestro)
-El sistema se gestiona a través de la terminal interactiva `sistema_maestro.sh`.
+```bash
+cp .env.example .env
+nano .env  # Configura tu dominio y credenciales
+```
+
+### 3. Desplegar Todo el Sistema
+
 ```bash
 ./sistema_maestro.sh
 ```
 
-### 2. 📋 Opciones del Menú Principal
-- **⚡ 1. Iniciar/Reiniciar:** Inicia la secuencia de arranque completa con auto-diagnóstico.
-- **📡 3. Monitor de Recursos:** Dashboard en tiempo real de uso de CPU/RAM de todos los contenedores.
-- **🔍 4. Auditor de Logs:** Streaming en vivo de logs para depurar el flujo de la aplicación.
-- **🔐 5. Bóveda del Sistema:** Visualiza de forma segura todas las API Keys, Contraseñas y Puntos de Acceso.
+Selecciona **Opción 1: DEPLOY STACK** y espera 3-5 minutos.
+
+### 4. Acceder a los Servicios
+
+| Servicio | URL | Credenciales |
+|:---------|:----|:-------------|
+| 💬 **Chatwoot** | `https://chat.tudominio.com` | Creadas en primer acceso |
+| 🤖 **Evolution API** | `https://api.tudominio.com` | API Key del `.env` |
+| ⚙️ **n8n** | `https://n8n.tudominio.com` | Email/Password del `.env` |
+| 🪣 **MinIO** | `https://s3.tudominio.com` | minioadmin / Password del `.env` |
 
 ---
 
-## 📦 Instalación y Despliegue
+## 📚 Documentación Completa
 
-### 📋 Prerrequisitos
-- 🐳 Docker & Docker Compose
-- 🐍 Python 3.9+
-- 🐙 Git
-
-### ⚡ Inicio Rápido
-1.  **Clonar Repositorio:**
-    ```bash
-    git clone <repo_url>
-    cd chatbot-stack
-    ```
-2.  **Configuración de Entorno:**
-    Asegúrate de que el archivo `.env` esté poblado con credenciales válidas (ver `env.example`).
-3.  **Lanzamiento:**
-    Ejecuta `./sistema_maestro.sh` y selecciona la **Opción 1**.
+- **[📘 Manual de Instalación](ops/docs/MANUAL_INSTALACION.md)** - Guía paso a paso desde cero
+- **[🔧 Configuración Manual](ops/docs/CONFIGURACION_MANUAL.md)** - Configuración avanzada de cada servicio
+- **[🛡️ Protocolo Aegis](ops/docs/protocolo_aegis_v11.md)** - Auto-curado y resiliencia
+- **[🏛️ Flujo Arquitectónico](ops/docs/flujo_arquitectonico_sentinel.md)** - Topología de datos
+- **[🔬 Auditoría Arquitectónica](ops/docs/auditoria_arquitectonica_v11.md)** - Análisis técnico
 
 ---
 
-## 📜 Verificación de Integridad
-Esta versión (**v11.0**) ha sido auditada contra el **Protocolo de Rigor Empresarial**, asegurando:
+## 📦 Estructura del Proyecto
 
-- ✅ **Repositorio Limpio:** Cero archivos de respaldo innecesarios o temporales.
-- ✅ **Configuración Segura:** Patrones estrictos en `.gitignore`.
-- ✅ **Rendimiento Optimizado:** Workers y caché pre-ajustados.
+```
+chatbot-stack/
+├── 📂 modules/              # Definiciones Docker Compose
+│   ├── 01-infra/            # PostgreSQL, Redis, MinIO
+│   ├── 02-apps/             # Chatwoot, Evolution, n8n
+│   └── 03-tunnel/           # Cloudflare Tunnel
+├── 📂 ops/                  # Centro de operaciones
+│   ├── docs/                # Documentación técnica
+│   ├── scripts/             # Scripts de mantenimiento
+│   └── backups/             # Backups automáticos
+├── 📂 persistence/          # Datos persistentes (volúmenes)
+├── 🔧 .env                  # Variables de entorno (NO subir a Git)
+├── 🚀 sistema_maestro.sh    # Orquestador principal
+└── 📖 README.md             # Este archivo
+```
 
 ---
+
+## 🩺 Troubleshooting
+
+### Chatwoot no carga
+```bash
+docker logs chatwoot --tail 100
+# Espera: "Listening on http://0.0.0.0:3000"
+```
+
+### Evolution API: QR no aparece
+```bash
+docker logs app_evolution | grep -i "qr"
+# Ya configurado con WhatsApp Web v2.3000.1033351060
+```
+
+### Multimedia: Imágenes o stickers no se envían
+✅ **El sistema ahora crea automáticamente los buckets de S3** (`chatwoot-storage`, `evolution-media`) al iniciar.  
+Si hay problemas, verifica que el servicio `minio-core` esté saludable:
+```bash
+docker ps | grep minio-core
+# Debe mostrar: (healthy)
+```
+
+---
+
+## 🔒 Seguridad
+
+- ✅ **Zero-Trust Access** vía Cloudflare Tunnel (No abre puertos en el router)
+- ✅ **.gitignore** configurado para proteger `.env` y `.env.bank`  
+- ✅ **Redis protegido** con password obligatorio
+- ✅ **PostgreSQL** solo accesible desde red interna Docker
+- ✅ **Healthchecks** activos para auto-recuperación
+
+---
+
+## 🛟 Soporte y Comunidad
+
+¿Problemas? ¿Sugerencias? Abre un [Issue en GitHub](https://github.com/HackUN09/chatbot-stack/issues)
+
+---
+
+## 📜 Licencia
+
+Este proyecto está bajo la licencia **MIT**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
+
+---
+
+<div align="center">
+
+**Desarrollado con 💖 por [HackUN09](https://github.com/HackUN09) & Antigravity AI**
+
+[![GitHub](https://img.shields.io/badge/GitHub-HackUN09-181717?style=for-the-badge&logo=github)](https://github.com/HackUN09)
+
+</div>

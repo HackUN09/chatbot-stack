@@ -1,150 +1,407 @@
-
+import os
 import json
 import urllib.request
 import urllib.error
-import os
-import sys
 import time
+import sys
+import re
+import subprocess
 import argparse
+import boto3
+from botocore.client import Config
 
-# --- SYSTEM CONTEXT ---
-if sys.platform == "win32":
-    import codecs
-    sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
-
-# --- ENV LOADER ---
-def get_env():
+# --- [00] CONFIGURATION ---
+# Load master .env settings
+# Load master .env settings with fallback encoding support
+def load_env():
     env = {}
-    try:
-        with open(".env", "r") as f:
-            for line in f:
-                if "=" in line and not line.startswith("#"):
-                    pair = line.strip().split("=", 1)
-                    if len(pair) == 2: env[pair[0]] = pair[1].strip()
-    except: pass
+    encodings = ['utf-8', 'cp1252', 'latin-1'] # Priority: UTF-8 -> Windows -> Generic
+    
+    for encoding in encodings:
+        try:
+            with open('.env', 'r', encoding=encoding) as f:
+                for line in f:
+                    if '=' in line and not line.strip().startswith('#'):
+                        key, val = line.strip().split('=', 1)
+                        env[key] = val
+            break # Success, stop trying encodings
+        except (UnicodeDecodeError, FileNotFoundError):
+            continue
+            
     return env
 
-ENV = get_env()
+ENV = load_env()
 
-# --- API HELPER (RETRY LOGIC) ---
-def call_api(endpoint, payload=None, method="POST", max_retries=3):
+# --- [01] API UTILS ---
+def call_api(endpoint, payload=None, method='POST', max_retries=3):
     base_url = "http://localhost:8080"
-    headers = {"Content-Type": "application/json", "apikey": ENV.get('EVOLUTION_API_KEY')}
+    api_key = ENV.get('EVOLUTION_API_KEY')
+    if not api_key:
+        return False, "EVOLUTION_API_KEY not set in environment"
+
+    headers = {"Content-Type": "application/json", "apikey": api_key}
     url = f"{base_url}{endpoint}"
-    data = json.dumps(payload).encode('utf-8') if payload else None
-    
+    payload_str = json.dumps(payload) if payload else None
+    data = payload_str.encode('utf-8') if payload_str else None
+
     for attempt in range(max_retries):
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
         try:
             with urllib.request.urlopen(req) as response:
                 return True, json.loads(response.read().decode('utf-8'))
-        except urllib.error.URLError as e:
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8')
+            if e.code == 401:
+                return False, f"401 Unauthorized: {error_body}"
+            return False, f"HTTP Error {e.code}: {error_body}"
+        except Exception as e:
             if attempt == max_retries - 1:
-                body = e.read().decode('utf-8') if hasattr(e, 'read') else str(e)
-                return False, body
-            time.sleep(2 ** attempt) # Exponential backoff
-    return False, "Max retries reached"
-
-# --- MODULES ---
-
-def get_var(var_name):
-    print(ENV.get(var_name, ""))
-
-def fix_evolution():
-    print("🧬 [ EVO_FIX ] Ejecutando Chequeo de Integridad Heurística v11.0...")
-    ok, res = call_api("/instance/fetchInstances", method="GET")
-    if not ok: return print("FAILED_UNREACHABLE")
-
-    data_list = res if isinstance(res, list) else res.get('instance', [])
-    if not isinstance(data_list, list): data_list = [data_list]
-    
-    if not data_list:
-        call_api("/instance/create", {"instanceName": "test", "token": "isekai", "qrcode": True})
-        target = "test"
-    else:
-        inst = data_list[0]
-        target = inst.get('name') or inst.get('instanceName') or inst.get('id')
-
-    settings = {
-        "rejectCall": False, "groupsIgnore": False, "alwaysOnline": True, 
-        "readMessages": True, "syncFullHistory": True, "readStatus": True
-    }
-    chatwoot = {
-        "enabled": True, "url": ENV.get('CHATWOOT_URL'), 
-        "token": ENV.get('CHATWOOT_GLOBAL_TOKEN'), 
-        "accountId": int(ENV.get('CHATWOOT_ACCOUNT_ID', 1)), 
-        "autoCreate": True, "syncHistory": True, "importMessages": True, 
-        "daysLimitImportMessages": 0, "signMsg": True, "reopenConversation": True,
-        "rejectCall": False # Required for v2.3.7 schema
-    }
-
-    # Attempt 1: Hybrid Hybrid
-    s_ok, _ = call_api(f"/settings/set/{target}", settings)
-    cw_ok, _ = call_api(f"/chatwoot/set/{target}", chatwoot)
-    
-    if not cw_ok: # Attempt 2: Nested
-        cw_ok, _ = call_api(f"/chatwoot/set/{target}", {"chatwoot": chatwoot})
-
-    if s_ok and cw_ok: print("VERIFIED")
-    else: print("FAILED_VALIDATION")
+                return False, str(e)
+            time.sleep(2 ** attempt)
 
 def setup_s3():
-    # Deprecated fallback - now using setup_s3_full
-    pass
-
-# --- S3 SOVEREIGNTY: MINIO PROVISIONER ---
-def setup_s3_full():
-    print("📦 [ S3_CORE ] Inicializando Aprovisionamiento MinIO...")
+    print("  [S3] Configurando Buckets en MinIO...")
+    if not check_service("MinIO Storage", url="http://localhost:9000/minio/health/live"):
+        return
+    s3_endpoint = ENV.get('STORAGE_ENDPOINT', 'http://localhost:9000').replace('https://', 'http://')
+    if 's3.isekaichat.com' in s3_endpoint:
+        s3_endpoint = "http://localhost:9000" # Local access check
+        
+    s3 = boto3.resource('s3',
+        endpoint_url=s3_endpoint,
+        aws_access_key_id=ENV.get('STORAGE_ACCESS_KEY_ID', 'minioadmin'),
+        aws_secret_access_key=ENV.get('STORAGE_SECRET_ACCESS_KEY', 'minioadmin'),
+        config=Config(signature_version='s3v4'),
+        region_name=ENV.get('S3_REGION', 'us-east-1')
+    )
     
-    # 1. Esperar a que MinIO esté listo
-    ready = False
-    for _ in range(10):
+    buckets = [ENV.get('S3_BUCKET', 'evolution-media'), ENV.get('STORAGE_BUCKET_NAME', 'chatwoot-storage')]
+    for bucket_name in buckets:
         try:
-            with urllib.request.urlopen("http://localhost:9000/minio/health/live") as r:
-                if r.status == 200:
-                    ready = True; break
-        except: time.sleep(2)
-    
-    if not ready: return print("FAILED_TIMEOUT")
+            bucket = s3.Bucket(bucket_name)
+            if bucket.creation_date:
+                print(f"    [INFO] Bucket '{bucket_name}' ya existe.")
+            else:
+                s3.create_bucket(Bucket=bucket_name)
+                print(f"    [OK] Bucket '{bucket_name}' creado.")
+        except Exception as e:
+            try:
+                s3.create_bucket(Bucket=bucket_name)
+                print(f"    [OK] Bucket '{bucket_name}' creado.")
+            except Exception as e2:
+                print(f"    [ERROR] Fallo al crear bucket {bucket_name}: {e2}")
 
-    # 2. Configurar buckets via 'mc' (MinIO Client) - Usando subprocess para rigor total
-    import subprocess
-    def run_mc(cmd):
-        base = ["docker", "exec", "core_minio", "mc"]
-        return subprocess.run(base + cmd, capture_output=True, text=True)
-
-    # Alias local
-    run_mc(["alias", "set", "local", "http://localhost:9000", ENV.get('MINIO_ROOT_USER'), ENV.get('MINIO_ROOT_PASSWORD')])
+def setup_chatwoot():
+    print("  [CW] Inicializando Admin, Cuenta e Inbox...")
+    if not check_service("Chatwoot Web", url="http://localhost:3000/health_check", retries=60):
+        print("    [WARN] Chatwoot no está listo, pero intentaremos la configuración vía Rails runner...")
+    admin_email = ENV.get('CHATWOOT_ADMIN_EMAIL', 'capsule.cor.arauca@gmail.com')
+    admin_pass = ENV.get('CHATWOOT_ADMIN_PASSWORD', 'HackUN1991.1')
     
-    buckets = ["chatwoot-storage", "evolution-media", "n8n-artifacts"]
-    for b in buckets:
-        print(f"    ➤ Provisionando bucket: {b}...")
-        run_mc(["mb", f"local/{b}"])
-        # Inyectar política Public-Read (Tarea 15)
-        run_mc(["anonymous", "set", "download", f"local/{b}"])
-        # Configurar CORS (Tarea 16)
-        # Nota: Normalmente CORS se inyecta vía JSON, aquí simplificamos con mc si es posible
-    
-    print("VERIFIED")
+    # Surgical Ruby script for Chatwoot onboarding
+    # Fixes the 'User/AccountUser must exist' by following precise order
+    ruby_script = f"begin; " \
+                  f"u = User.find_by(email: '{admin_email}') || User.new(email: '{admin_email}'); " \
+                  f"u.name = 'Administrator'; u.password = '{admin_pass}'; u.password_confirmation = '{admin_pass}'; " \
+                  f"u.confirmed_at = Time.now; u.save!; " \
+                  f"a = Account.first || Account.create!(name: 'Isekai Stack'); " \
+                  f"au = AccountUser.find_by(account_id: a.id, user_id: u.id) || AccountUser.create!(account: a, user: u, role: :administrator); " \
+                  f"Current.account = a; Current.user = u; " \
+                  f"inbox = a.inboxes.find_by(name: 'test'); " \
+                  f"if inbox.nil?; " \
+                  f"  ch = Channel::Api.create!(account: a); " \
+                  f"  inbox = a.inboxes.create!(name: 'test', account: a, channel: ch); " \
+                  f"end; " \
+                  f"unless inbox.members.include?(u); " \
+                  f"  mb = inbox.inbox_members.new(user_id: u.id); " \
+                  f"  mb.save!; " \
+                  f"end; " \
+                  f"puts 'CW_SETUP_OK'; " \
+                  f"puts 'TOKEN:' + u.access_token.token if u.access_token; " \
+                  f"rescue => e; puts 'ERROR:' + e.message; end"
 
-def system_audit():
-    print("🔍 [ AUDIT ] Reportando métricas de integridad...")
-    # Tarea 21-23: Metadatos de latencia y hilos
-    print("LATENCY_INTERNAL: <10ms")
-    print("CPU_THREADS_HEALTHY: TRUE")
-    print("ALL_SYSTEMS_GOD_MODE")
-
-# --- CLI ---
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Sentinel Engine v11.0 Core')
-    parser.add_argument('--get', help='Get environment variable')
-    parser.add_argument('--fix-evo', action='store_true', help='Execute Evolution integrity fix')
-    parser.add_argument('--setup-s3', action='store_true', help='Provision S3 buckets')
-    parser.add_argument('--audit', action='store_true', help='System audit')
+    cmd = ["docker", "exec", "-e", "RUBYOPT=-W0", "chatwoot", "bin/rails", "runner", ruby_script]
     
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        output = result.stdout + result.stderr
+        
+        # Clarification for the user: 
+        # 1. Real errors (ERROR:) are captured and displayed.
+        # 2. Technical debris (Warnings) is filtered out.
+        if "CW_SETUP_OK" in output:
+            token_match = re.search(r'TOKEN:(\S+)', output)
+            if token_match:
+                token = token_match.group(1)
+                print(f"    [OK] Admin configurado. Token: {token[:8]}...")
+                # Auto-inject into .env
+                if os.path.exists('.env'):
+                    with open('.env', 'r') as f:
+                        lines = f.readlines()
+                    with open('.env', 'w') as f:
+                        for line in lines:
+                            if line.startswith('CHATWOOT_GLOBAL_TOKEN='):
+                                f.write(f'CHATWOOT_GLOBAL_TOKEN={token}\n')
+                            else:
+                                f.write(line)
+                    print("    [AUTO] Token inyectado quirúrgicamente en .env")
+            else:
+                print("    [OK] Chatwoot Admin Initialized")
+        elif "ERROR:" in output:
+            error_msg = re.search(r'ERROR:(.*)', output)
+            print(f"    [ERROR] Error Real Detectado: {error_msg.group(1) if error_msg else 'Fallo de validación'}")
+        elif result.returncode != 0:
+            print(f"    [ERROR] Fallo Crítico de Rails (Code {result.returncode})")
+            
+    except Exception as e:
+        print(f"    [ERROR] Fallo de Orquestación: {e}")
+
+# --- [02] ACTIONS ---
+
+def prepare_chatwoot_db():
+    print("🛠️ [ CW_PREP ] Verificando Esquema de Base de Datos...")
+    
+    # 1. Check if DB is reachable by Rails (using a simple runner command)
+    # We use 'User.count rescue -1' to handle missing table gracefully in Ruby
+    check_cmd = ["docker", "exec", "-e", "RUBYOPT=-W0", "chatwoot", "bin/rails", "runner", "begin; puts User.count; rescue; puts 'MISSING_TABLES'; end"]
+    
+    # Retry loop for Rails startup (it takes time to even be able to run runner)
+    print("    [CHECK] Conectando con Rails Environment...")
+    needs_migration = False
+    
+    for i in range(15):
+        res = subprocess.run(check_cmd, capture_output=True, text=True, check=False)
+        output = res.stdout + res.stderr
+        
+        if "MISSING_TABLES" in output or "Relation \"users\" does not exist" in output:
+            needs_migration = True
+            print("    [INFO] Tablas no encontradas. Se requiere migración inicial.")
+            break
+        elif res.returncode == 0 and re.search(r'^\d+$', output.strip()):
+            print(f"    [OK] Esquema detectado ({output.strip()} usuarios).")
+            return # DB is ready
+        else:
+            time.sleep(3)
+    
+    if needs_migration:
+        print("    [AUTO] Ejecutando Migraciones (Esto puede tardar 1-2 minutos)...")
+        # Run db:prepare which handles create/migrate/seed
+        migrate_cmd = ["docker", "exec", "-e", "RUBYOPT=-W0", "chatwoot", "bundle", "exec", "rails", "db:prepare"]
+        
+        start_time = time.time()
+        proc = subprocess.Popen(migrate_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        
+        # Stream output to show progress
+        for line in proc.stdout:
+            # Filter noise
+            if "Invoke" in line or "Execute" in line: continue
+            print(f"       > {line.strip()}")
+            
+        proc.wait()
+        
+        if proc.returncode == 0:
+            print("    [OK] Base de datos Chatwoot preparada exito.")
+        else:
+            print("    [ERROR] Fallo en migración.")
+
+def fix_evolution():
+    print("🧬 [ EVO_FIX ] Ejecutando Chequeo de Integridad...")
+    if not check_service("Evolution API", url="http://localhost:8080/"):
+        return
+    
+    # 1. Detect target instance (with retries for startup)
+    instances = None
+    for i in range(8):
+        ok, res = call_api("/instance/fetchInstances", method='GET')
+        if ok:
+            instances = res
+            break
+        print(f"    [WAIT] Evolution API no responde ({res}). Reintentando en 8s...")
+        time.sleep(8)
+        
+    if instances is None:
+        print("FAILED: Evolution API unavailable after retries.")
+        return
+
+    # Auto-provision instance if none exist
+    if not instances or len(instances) == 0:
+        print("    [AUTO] No hay instancias activas. Creando 'Master-Bridge' automáticamente...")
+        payload = {
+            "instanceName": "Master-Bridge",
+            "token": ENV.get('EVOLUTION_API_KEY'),
+            "qrcode": True
+        }
+        ok_create, res_create = call_api("/instance/create", payload)
+        if ok_create:
+            print("    [OK] Instancia 'Master-Bridge' creada con éxito.")
+            target = "Master-Bridge"
+        else:
+            print(f"    [ERROR] No se pudo crear la instancia: {res_create}")
+            return
+    else:
+        target = instances[0].get('instanceName')
+        print(f"    [INFO] Active instance detected: {target}")
+
+    # Evolution v2.x Integration Mapping
+    chatwoot = {
+        "enabled": True, 
+        "accountId": str(ENV.get('CHATWOOT_ACCOUNT_ID', '1')),
+        "token": ENV.get('CHATWOOT_GLOBAL_TOKEN', '').strip(), 
+        "url": ENV.get('CHATWOOT_URL', "http://chatwoot:3000"),
+        "signMsg": True,
+        "reopenConversation": True,
+        "conversationPending": False,
+        "nameInbox": target,
+        "mergeBrazilContacts": True,
+        "importContacts": True,
+        "importMessages": True,
+        "daysLimitImportMessages": 60,
+        "signDelimiter": "\n",
+        "autoCreate": True,
+        "organization": "Sentinel Bot",
+        "logo": ""
+    }
+    
+    # Sync Chatwoot integration
+    cw_ok, cw_res = call_api(f"/chatwoot/set/{target}", chatwoot)
+    if not cw_ok:
+        print(f"    [ERROR] Sync failed for {target}: {cw_res}")
+        return
+    
+    print(f"    [OK] Bridge Evolution-Chatwoot ({target}): SINCRONIZADO")
+
+# --- [03] HELPERS ---
+def check_service(name, url=None, cmd=None, retries=60):
+    print(f"⏳ [WAIT] Verificando {name}...")
+    for i in range(retries):
+        try:
+            if url:
+                req = urllib.request.Request(url, method='GET')
+                with urllib.request.urlopen(req, timeout=5) as response:
+                    if response.status in [200, 401]:
+                        print(f"    [OK] {name} está listo.")
+                        return True
+            elif cmd:
+                res = subprocess.run(cmd, capture_output=True, check=False)
+                if res.returncode == 0:
+                    print(f"    [OK] {name} está listo.")
+                    return True
+        except Exception:
+            pass
+        
+        if i % 5 == 0: print(f"       ... esperando {name} ...")
+        time.sleep(2)
+    print(f"    [ERROR] {name} no respondió a tiempo.")
+    return False
+
+def fix_database():
+    print("🗄️ [ DB_FIX ] Verificando Consistencia de Usuarios...")
+    
+    # 1. Confirm DB is listening (Strict Check via Helper)
+    if not check_service("Postgres Core", cmd=["docker", "exec", "db_core", "pg_isready", "-U", "root_admin", "-d", "postgres"]):
+        return
+
+    users = ["chatwoot_user", "evolution_user", "n8n_user"]
+    for user in users:
+        print(f"    [FIX] Garantizando permisos para {user}...")
+        
+        # 2. Proactive Fix: Create user if it doesn't exist (Idempotent)
+        sql_create = f"DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '{user}') THEN CREATE ROLE {user} WITH LOGIN SUPERUSER PASSWORD 'pass_placeholder'; END IF; END $$;"
+        cmd_create = ["docker", "exec", "db_core", "psql", "-U", "root_admin", "-d", "postgres", "-c", sql_create]
+        
+        # Retry loop for creation (handles "shutting down" or locked DB)
+        for k in range(5):
+            res_create = subprocess.run(cmd_create, capture_output=True, text=True, check=False)
+            if res_create.returncode == 0:
+                 break
+            elif "shutting down" in res_create.stderr:
+                 print(f"       [RETRY] DB reiniciándose... reintentando en 5s...")
+                 time.sleep(5)
+            else:
+                 # If it fails, maybe it already exists or other error, we proceed to ALTER to be sure
+                 break
+
+        # 3. Ensure SUPERUSER (Legacy check / Validation)
+        cmd_alter = ["docker", "exec", "db_core", "psql", "-U", "root_admin", "-d", "postgres", "-c", f"ALTER USER {user} WITH SUPERUSER;"]
+        result = subprocess.run(cmd_alter, capture_output=True, text=True, check=False)
+
+        if result.returncode == 0:
+            print(f"    [OK] {user} operativo ({result.stdout.strip() if result.stdout else 'Checked'}).")
+        else:
+            print(f"    [ERROR] No se pudo configurar {user}: {result.stderr.strip()}")
+
+def wait_for_ready():
+    print("⏳ [ WAIT ] Esperando a que TODOS los servicios estén listos (Healthcheck)...")
+    
+    # Defines services and their health endpoints/commands
+    services = [
+        {"name": "Database (Postgres)", "url": None, "cmd": ["docker", "exec", "db_core", "pg_isready", "-U", "root_admin"]},
+        {"name": "Evolution API", "url": "http://localhost:8080/", "cmd": None},
+        {"name": "Chatwoot Web", "url": "http://localhost:3000/health_check", "cmd": None}, # Use proper health endpoint
+        {"name": "MinIO Storage", "url": "http://localhost:9000/minio/health/live", "cmd": None}
+    ]
+
+    for service in services:
+        name = service["name"]
+        print(f"    [CHECK] Verificando {name}...")
+        
+        ready = False
+        for i in range(120): # Wait up to 600 seconds (10 minutes) for slow boots
+            try:
+                if service["url"]:
+                    # HTTP Check
+                    req = urllib.request.Request(service["url"], method='GET')
+                    with urllib.request.urlopen(req, timeout=5) as response:
+                        if response.status in [200, 401]: # 401 is fine, means auth layer is up
+                            ready = True
+                elif service["cmd"]:
+                    # Command Check (Docker)
+                    res = subprocess.run(service["cmd"], capture_output=True, check=False)
+                    if res.returncode == 0:
+                        ready = True
+                
+                if ready:
+                    print(f"    [OK] {name} está operativo.")
+                    break
+            except Exception:
+                pass
+            
+            if i % 2 == 0: print(f"       ... esperando {name} ({i}/30) ...")
+            time.sleep(5)
+        
+        if not ready:
+            print(f"    [ERROR] {name} NO respondió después de 150 segundos. Abortando configuración.")
+            sys.exit(1) # Stop script to prevent cascading errors
+    
+    print("    [OK] Sistema completamente estable. Procediendo con la configuración.")
+
+def main():
+    parser = argparse.ArgumentParser(description="Sentinel Engine - Orchestrator V11.1")
+    parser.add_argument('--fix-evo', action='store_true', help="Fix Evolution API sync")
+    parser.add_argument('--fix-db', action='store_true', help="Fix Database permissions")
+    parser.add_argument('--setup-s3', action='store_true', help="Setup MinIO buckets")
+    parser.add_argument('--prep-cw', action='store_true', help="Run Chatwoot Migrations if needed")
+    parser.add_argument('--setup-cw', action='store_true', help="Setup Chatwoot admin")
+    parser.add_argument('--wait', action='store_true', help="Wait for services to be ready")
+    parser.add_argument('--get', type=str, help="Get ENV variable")
     args = parser.parse_args()
-    
-    if args.get: get_var(args.get)
-    elif args.fix_evo: fix_evolution()
-    elif args.setup_s3: setup_s3_full()
-    elif args.audit: system_audit()
+
+    if args.get:
+        print(ENV.get(args.get, ""))
+    elif args.prep_cw:
+        prepare_chatwoot_db()
+    elif args.wait:
+        wait_for_ready()
+    elif args.fix_evo:
+        fix_evolution()
+    elif args.fix_db:
+        fix_database()
+    elif args.setup_s3:
+        setup_s3()
+    elif args.setup_cw:
+        setup_chatwoot()
+    else:
+        print("Sentinel Engine V11.1 - No action specified.")
+
+if __name__ == "__main__":
+    main()

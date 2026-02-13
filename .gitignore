@@ -4,6 +4,7 @@
 
 # --- CORES ---
 .env
+.env.bank
 .env.bak*
 .env.old*
 .env.backup*
