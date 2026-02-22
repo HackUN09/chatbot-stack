@@ -21,16 +21,18 @@ echo "    ╚═════╝ ╚══════╝╚══════╝
 echo -e "${B}    ──── CLEAN INSTALL ENGINE // NEXUS PURGE PROTOCOL ────${NC}\n"
 
 # 1. Detener containers del proyecto
-echo -e "${Y}[1/5] Deteniendo todos los contenedores...${NC}"
-docker stop $(docker ps -aq) 2>/dev/null || echo "No hay contenedores corriendo."
+echo -e "${Y}[1/5] Deteniendo contenedores de Sentinel OS...${NC}"
+docker compose -p 03-tunnel -f modules/03-tunnel/docker-compose.yml down 2>/dev/null
+docker compose -p 02-apps -f modules/02-apps/docker-compose.yml down 2>/dev/null
+docker compose -p 01-infra -f modules/01-infra/docker-compose.yml down 2>/dev/null
 
-# 2. Eliminar containers
-echo -e "${Y}[2/5] Removiendo contenedores...${NC}"
-docker rm $(docker ps -aq) 2>/dev/null || echo "No hay contenedores para borrar."
+# 2. Forzar limpieza de contenedores huerfanos del proyecto
+echo -e "${Y}[2/5] Removiendo contenedores huérfanos del proyecto...${NC}"
+docker ps -a --filter "name=chatwoot|evolution|n8n|postgres|redis|minio|cloudflared" -q | xargs -r docker rm -f 2>/dev/null || true
 
 # 3. Eliminar redes
-echo -e "${Y}[3/5] Limpiando redes de Docker...${NC}"
-docker network prune -f
+echo -e "${Y}[3/5] Limpiando redes de Sentinel OS...${NC}"
+docker network rm secure-net 2>/dev/null || true
 
 # 4. Eliminar imágenes (incluyendo dangling)
 echo -e "${Y}[4/5] Purgando imágenes de Docker...${NC}"
@@ -43,7 +45,7 @@ echo -e "${R}    Esto eliminará bases de datos y archivos permanentes.${NC}"
 read -p "    ¿Confirmar borrado de volúmenes? (s/N): " confirm_vol
 if [[ "$confirm_vol" =~ ^([sS][iI]|[sS])$ ]]; then
     echo -e "${Y}[5/5] Purgando volúmenes de Docker...${NC}"
-    docker volume rm $(docker volume ls -q) 2>/dev/null
+    docker volume rm 01-infra_pgadmin_data 01-infra_postgres_data 01-infra_redis_data 01-infra_minio_data 02-apps_chatwoot_data 02-apps_chatwoot_redis_data 02-apps_n8n_data 02-apps_evolution_data 2>/dev/null || true
     echo -e "${G}✅ Volúmenes eliminados.${NC}"
 else
     echo -e "${B}[SKIP] Volúmenes omitidos. La data persistirá.${NC}"

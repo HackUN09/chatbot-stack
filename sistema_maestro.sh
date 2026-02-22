@@ -8,8 +8,17 @@
 
 # --- SYSTEM CONTEXT ---
 export LC_ALL=C.UTF-8
-ENGINE="python ops/scripts/sentinel_engine.py"
-STRESS="python ops/scripts/stress_test_enigma.py"
+
+# Force Anaconda Python path directly to avoid bash cross-platform if-file checks
+USER_PYTHON="C:/Users/wamr1/anaconda3/python.exe"
+if command -v python >/dev/null 2>&1; then
+    PY_CMD="python"
+else
+    PY_CMD="$USER_PYTHON"
+fi
+
+ENGINE="\"$PY_CMD\" ops/scripts/sentinel_engine.py"
+STRESS="\"$PY_CMD\" ops/scripts/stress_test_enigma.py"
 
 # --- ENV NEXUS RECONCILIATION ---
 if [ ! -f .env ]; then
@@ -119,7 +128,7 @@ function execute_genesis() {
 
     # 1. Capa de Infraestructura (01-infra)
     tag "INFRA" "Levantando Base de Datos, Cache y Almacenamiento..."
-    docker compose --env-file .env -f modules/01-infra/docker-compose.yml up -d
+    docker compose -p 01-infra --env-file .env -f modules/01-infra/docker-compose.yml up -d
     draw_progress 30
     
     # 2. DB User Check (Essential)
@@ -128,12 +137,12 @@ function execute_genesis() {
     
     # 3. Capa de Aplicaciones (02-apps)
     tag "APPS" "Levantando Aplicaciones (Chatwoot, Evolution, n8n)..."
-    docker compose --env-file .env -f modules/02-apps/docker-compose.yml up -d
+    docker compose -p 02-apps --env-file .env -f modules/02-apps/docker-compose.yml up -d
     draw_progress 70
     
     # 4. Capa de Túnel (03-tunnel)
     tag "TUNNEL" "Abriendo puente seguro con Cloudflare..."
-    docker compose --env-file .env -f modules/03-tunnel/docker-compose.yml up -d
+    docker compose -p 03-tunnel --env-file .env -f modules/03-tunnel/docker-compose.yml up -d
     draw_progress 100
     
     echo -e "\n  ${G}✨ SISTEMA MODULAR DESPLEGADO.${NC}"
@@ -219,12 +228,17 @@ while true; do
         6)
             render_header
             tag "LOGS" "Streaming de Auditoría (CTRL+C para salir)..."
-            docker compose -f modules/01-infra/docker-compose.yml -f modules/02-apps/docker-compose.yml -f modules/03-tunnel/docker-compose.yml logs -f --tail=100
+            docker compose -p 01-infra -f modules/01-infra/docker-compose.yml logs -f --tail=100 &
+            docker compose -p 02-apps -f modules/02-apps/docker-compose.yml logs -f --tail=100 &
+            docker compose -p 03-tunnel -f modules/03-tunnel/docker-compose.yml logs -f --tail=100 &
+            wait
             ;;
         7)
             render_header
             tag "SHUTDOWN" "Desconectando nodos de la red..."
-            docker compose -f modules/01-infra/docker-compose.yml -f modules/02-apps/docker-compose.yml -f modules/03-tunnel/docker-compose.yml down
+            docker compose -p 03-tunnel -f modules/03-tunnel/docker-compose.yml down
+            docker compose -p 02-apps -f modules/02-apps/docker-compose.yml down
+            docker compose -p 01-infra -f modules/01-infra/docker-compose.yml down
             echo -e "  ${G}Sistema apagado correctamente.${NC}"
             echo -e "\n"
             read -p "  Presiona ENTER para volver..."
