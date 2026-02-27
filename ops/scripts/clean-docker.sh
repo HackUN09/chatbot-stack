@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-# 🧹 DOCKER NUCLEAR CLEANUP - SENTINEL OS v11.1
+# 🧹 DOCKER NUCLEAR CLEANUP - SENTINEL OS v11.0
 # ==============================================================================
 
 # Colores para salida profesional
