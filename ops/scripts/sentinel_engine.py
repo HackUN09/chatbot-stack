@@ -372,7 +372,7 @@ def wait_for_ready():
             except Exception:
                 pass
             
-            if i % 2 == 0: print(f"       ... esperando {name} ({i}/30) ...")
+            if i % 2 == 0: print(f"       ... esperando {name} ({i}/120) ...")
             time.sleep(5)
         
         if not ready:
