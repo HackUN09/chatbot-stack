@@ -343,7 +343,7 @@ def wait_for_ready():
     services = [
         {"name": "Database (Postgres)", "url": None, "cmd": ["docker", "exec", "db_core", "pg_isready", "-U", "root_admin"]},
         {"name": "Evolution API", "url": "http://localhost:8080/", "cmd": None},
-        {"name": "Chatwoot Web", "url": "http://localhost:3000/health_check", "cmd": None}, # Use proper health endpoint
+        {"name": "Chatwoot Web", "url": "http://localhost:3000/api", "cmd": None}, # /api returns 200, /health_check returns 404 in v3.12
         {"name": "MinIO Storage", "url": "http://localhost:9000/minio/health/live", "cmd": None}
     ]
 
@@ -358,7 +358,7 @@ def wait_for_ready():
                     # HTTP Check
                     req = urllib.request.Request(service["url"], method='GET')
                     with urllib.request.urlopen(req, timeout=5) as response:
-                        if response.status in [200, 401]: # 401 is fine, means auth layer is up
+                        if response.status in [200, 401, 404, 301, 302]: # Any typical response means server is alive
                             ready = True
                 elif service["cmd"]:
                     # Command Check (Docker)
