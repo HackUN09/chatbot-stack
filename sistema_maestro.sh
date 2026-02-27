@@ -17,8 +17,8 @@ else
     PY_CMD="$USER_PYTHON"
 fi
 
-ENGINE="\"$PY_CMD\" ops/scripts/sentinel_engine.py"
-STRESS="\"$PY_CMD\" ops/scripts/stress_test_enigma.py"
+ENGINE="$PY_CMD ops/scripts/sentinel_engine.py"
+STRESS="$PY_CMD ops/scripts/stress_test_enigma.py"
 
 # --- ENV NEXUS RECONCILIATION ---
 if [ ! -f .env ]; then
@@ -120,33 +120,57 @@ function render_access_dashboard() {
 
 function execute_genesis() {
     render_header
-    tag "GENESIS" "Iniciando Despliegue Modular Seguro (Multimedia Ready)..."
+    tag "GENESIS" "Iniciando Despliegue Modular Seguro (Multimedia + Auto-Config)..."
     
     # 0. Red de Seguridad (Global para módulos)
     docker network create secure-net 2>/dev/null || true
     tag "NET" "Red secure-net garantizada."
 
     # 1. Capa de Infraestructura (01-infra)
-    tag "INFRA" "Levantando Base de Datos, Cache y Almacenamiento..."
+    tag "INFRA" "Levantando Base de Datos, Cache y Almacenamiento S3..."
     docker compose -p 01-infra --env-file .env -f modules/01-infra/docker-compose.yml up -d
+    draw_progress 15
+
+    # 2. DB User Integrity Fix (corre en paralelo mientras infra arranca)
+    tag "DB" "Garantizando integridad de usuarios de Base de Datos..."
+    $ENGINE --fix-db
     draw_progress 30
     
-    # 2. DB User Check (Essential)
-    tag "FIX" "Garantizando integridad de usuarios de Base de Datos..."
-    $ENGINE --fix-db
-    
     # 3. Capa de Aplicaciones (02-apps)
-    tag "APPS" "Levantando Aplicaciones (Chatwoot, Evolution, n8n)..."
+    tag "APPS" "Levantando Chatwoot, Evolution API, n8n..."
     docker compose -p 02-apps --env-file .env -f modules/02-apps/docker-compose.yml up -d
-    draw_progress 70
+    draw_progress 50
     
     # 4. Capa de Túnel (03-tunnel)
-    tag "TUNNEL" "Abriendo puente seguro con Cloudflare..."
+    tag "TUNNEL" "Abriendo puente seguro con Cloudflare Zero Trust..."
     docker compose -p 03-tunnel --env-file .env -f modules/03-tunnel/docker-compose.yml up -d
+    draw_progress 60
+
+    # 5. Esperar a que TODOS los servicios respondan (Health Gate)
+    tag "WAIT" "⏳ Esperando que todos los servicios estén operativos (Health Gate)..."
+    $ENGINE --wait
+    draw_progress 75
+
+    # 6. Configurar S3: Crear Buckets + Aplicar Políticas Públicas (Multimedia Ready)
+    tag "S3" "🪣 Garantizando buckets MinIO con acceso público (imágenes, videos, PDFs)..."
+    $ENGINE --setup-s3
+    draw_progress 85
+
+    # 7. Configurar Chatwoot Admin + Auto-injectar Token en .env (Idempotente)
+    tag "CW" "💬 Inicializando Chatwoot Admin e inyectando token en .env..."
+    $ENGINE --setup-cw
+    draw_progress 92
+
+    # 8. Sincronizar Evolution API con Chatwoot (Webhook + Inbox)
+    tag "EVO" "🤖 Sincronizando Evolution API → Chatwoot (Bridge)..."
+    $ENGINE --fix-evo
     draw_progress 100
     
-    echo -e "\n  ${G}✨ SISTEMA MODULAR DESPLEGADO.${NC}"
-    echo -e "  ${Y}[INFO] Arquitectura profesional restaurada.${NC}"
+    echo -e "\n  ${G}✅ SISTEMA COMPLETAMENTE DESPLEGADO Y SINCRONIZADO.${NC}"
+    echo -e "  ${G}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "  ${Y}• Multimedia (imágenes, videos, stickers, PDFs): ACTIVO${NC}"
+    echo -e "  ${Y}• Chatwoot ↔ Evolution: SINCRONIZADOS${NC}"
+    echo -e "  ${Y}• S3 Buckets (públicos): GARANTIZADOS${NC}"
     
     render_access_dashboard
     
@@ -211,11 +235,14 @@ while true; do
             ;;
         4)
             render_header
-            tag "NEXUS" "Forzando Sincronización de Estado..."
+            tag "NEXUS" "Forzando Sincronización de Estado (Repair & Sync)..."
+            echo -e "  ${D}Esta operación es IDEMPOTENTE: no borra datos, solo repara estado.${NC}\n"
+            $ENGINE --wait
             $ENGINE --fix-db
             $ENGINE --setup-s3
+            $ENGINE --setup-cw
             $ENGINE --fix-evo
-            echo -e "  ${G}Nexus Sincronizado.${NC}"
+            echo -e "\n  ${G}✅ Nexus Sincronizado. Sistema en estado óptimo.${NC}"
             echo -e "\n"
             read -p "  Presiona ENTER para volver..."
             ;;

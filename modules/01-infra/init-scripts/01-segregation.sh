@@ -5,9 +5,10 @@ set -e
 # PostgreSQL - Database Segregation & User Provisioning Script
 # ===================================================================
 # This script creates isolated databases and users for each service
-# in the Sentinel OS stack. Executed on first PostgreSQL boot.
+# in the Sentinel OS stack. Executed automatically on first PostgreSQL boot.
 # ===================================================================
 
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
     -- ==============================================
     -- [1] CHATWOOT DATABASE & USER
     -- ==============================================

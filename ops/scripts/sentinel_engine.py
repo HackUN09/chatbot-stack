@@ -7,8 +7,6 @@ import sys
 import re
 import subprocess
 import argparse
-import boto3
-from botocore.client import Config
 
 # --- [00] CONFIGURATION ---
 # Load master .env settings
@@ -60,40 +58,50 @@ def call_api(endpoint, payload=None, method='POST', max_retries=3):
             time.sleep(2 ** attempt)
 
 def setup_s3():
+    """Crea buckets en MinIO y aplica políticas de acceso público usando mc dentro del container."""
     print("  [S3] Configurando Buckets en MinIO...")
     if not check_service("MinIO Storage", url="http://localhost:9000/minio/health/live"):
         return
-    s3_endpoint = ENV.get('STORAGE_ENDPOINT', 'http://localhost:9000').replace('https://', 'http://')
-    if 's3.isekaichat.com' in s3_endpoint:
-        s3_endpoint = "http://localhost:9000" # Local access check
-        
-    s3 = boto3.resource('s3',
-        endpoint_url=s3_endpoint,
-        aws_access_key_id=ENV.get('STORAGE_ACCESS_KEY_ID', 'minioadmin'),
-        aws_secret_access_key=ENV.get('STORAGE_SECRET_ACCESS_KEY', 'minioadmin'),
-        config=Config(signature_version='s3v4'),
-        region_name=ENV.get('S3_REGION', 'us-east-1')
-    )
-    
-    buckets = [ENV.get('S3_BUCKET', 'evolution-media'), ENV.get('STORAGE_BUCKET_NAME', 'chatwoot-storage')]
-    for bucket_name in buckets:
-        try:
-            bucket = s3.Bucket(bucket_name)
-            if bucket.creation_date:
-                print(f"    [INFO] Bucket '{bucket_name}' ya existe.")
-            else:
-                s3.create_bucket(Bucket=bucket_name)
-                print(f"    [OK] Bucket '{bucket_name}' creado.")
-        except Exception as e:
-            try:
-                s3.create_bucket(Bucket=bucket_name)
-                print(f"    [OK] Bucket '{bucket_name}' creado.")
-            except Exception as e2:
-                print(f"    [ERROR] Fallo al crear bucket {bucket_name}: {e2}")
+
+    minio_user = ENV.get('MINIO_ROOT_USER', 'minioadmin')
+    minio_pass = ENV.get('MINIO_ROOT_PASSWORD', 'minioadmin')
+    evo_bucket = ENV.get('EVOLUTION_BUCKET', ENV.get('S3_BUCKET', 'evolution-media'))
+    cw_bucket  = ENV.get('CHATWOOT_BUCKET', ENV.get('STORAGE_BUCKET_NAME', 'chatwoot-storage'))
+
+    # Paso 1: Crear alias local dentro del container minio-core
+    alias_cmd = [
+        "docker", "exec", "minio-core",
+        "mc", "alias", "set", "local",
+        "http://localhost:9000", minio_user, minio_pass
+    ]
+    res_alias = subprocess.run(alias_cmd, capture_output=True, text=True, check=False)
+    if res_alias.returncode != 0:
+        print(f"    [ERROR] No se pudo crear alias mc: {res_alias.stderr.strip()}")
+        return
+
+    # Paso 2: Crear y configurar cada bucket
+    for bucket_name in [evo_bucket, cw_bucket]:
+        # Crear bucket (idempotente)
+        mb_cmd = ["docker", "exec", "minio-core", "mc", "mb", "--ignore-existing", f"local/{bucket_name}"]
+        res_mb = subprocess.run(mb_cmd, capture_output=True, text=True, check=False)
+        if res_mb.returncode == 0:
+            print(f"    [OK] Bucket '{bucket_name}' garantizado.")
+        else:
+            print(f"    [WARN] mb resultado: {res_mb.stderr.strip()}")
+
+        # Aplicar política pública de descarga
+        policy_cmd = ["docker", "exec", "minio-core", "mc", "anonymous", "set", "download", f"local/{bucket_name}"]
+        res_pol = subprocess.run(policy_cmd, capture_output=True, text=True, check=False)
+        if res_pol.returncode == 0:
+            print(f"    [OK] Política pública aplicada a '{bucket_name}'.")
+        else:
+            print(f"    [WARN] Policy resultado: {res_pol.stderr.strip()}")
+
+    print("    [S3] Setup completo.")
 
 def setup_chatwoot():
     print("  [CW] Inicializando Admin, Cuenta e Inbox...")
-    if not check_service("Chatwoot Web", url="http://localhost:3000/health_check", retries=60):
+    if not check_service("Chatwoot Web", url="http://localhost:3000/auth/sign_in", retries=60):
         print("    [WARN] Chatwoot no está listo, pero intentaremos la configuración vía Rails runner...")
     admin_email = ENV.get('CHATWOOT_ADMIN_EMAIL', 'capsule.cor.arauca@gmail.com')
     admin_pass = ENV.get('CHATWOOT_ADMIN_PASSWORD', 'HackUN1991.1')
@@ -120,7 +128,7 @@ def setup_chatwoot():
                   f"puts 'TOKEN:' + u.access_token.token if u.access_token; " \
                   f"rescue => e; puts 'ERROR:' + e.message; end"
 
-    cmd = ["docker", "exec", "-e", "RUBYOPT=-W0", "chatwoot", "bin/rails", "runner", ruby_script]
+    cmd = ["docker", "exec", "-e", "RUBYOPT=-W0", "chatwoot-web", "bin/rails", "runner", ruby_script]
     
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=False)
@@ -160,47 +168,39 @@ def setup_chatwoot():
 
 def prepare_chatwoot_db():
     print("🛠️ [ CW_PREP ] Verificando Esquema de Base de Datos...")
-    
-    # 1. Check if DB is reachable by Rails (using a simple runner command)
-    # We use 'User.count rescue -1' to handle missing table gracefully in Ruby
-    check_cmd = ["docker", "exec", "-e", "RUBYOPT=-W0", "chatwoot", "bin/rails", "runner", "begin; puts User.count; rescue; puts 'MISSING_TABLES'; end"]
-    
-    # Retry loop for Rails startup (it takes time to even be able to run runner)
+
+    check_cmd = ["docker", "exec", "-e", "RUBYOPT=-W0", "chatwoot-web", "bin/rails", "runner",
+                 "begin; puts User.count; rescue; puts 'MISSING_TABLES'; end"]
+
     print("    [CHECK] Conectando con Rails Environment...")
     needs_migration = False
-    
+
     for i in range(15):
         res = subprocess.run(check_cmd, capture_output=True, text=True, check=False)
         output = res.stdout + res.stderr
-        
-        if "MISSING_TABLES" in output or "Relation \"users\" does not exist" in output:
+
+        if "MISSING_TABLES" in output or 'Relation "users" does not exist' in output:
             needs_migration = True
             print("    [INFO] Tablas no encontradas. Se requiere migración inicial.")
             break
         elif res.returncode == 0 and re.search(r'^\d+$', output.strip()):
             print(f"    [OK] Esquema detectado ({output.strip()} usuarios).")
-            return # DB is ready
+            return
         else:
             time.sleep(3)
-    
+
     if needs_migration:
         print("    [AUTO] Ejecutando Migraciones (Esto puede tardar 1-2 minutos)...")
-        # Run db:prepare which handles create/migrate/seed
-        migrate_cmd = ["docker", "exec", "-e", "RUBYOPT=-W0", "chatwoot", "bundle", "exec", "rails", "db:prepare"]
-        
-        start_time = time.time()
+        migrate_cmd = ["docker", "exec", "-e", "RUBYOPT=-W0", "chatwoot-web",
+                       "bundle", "exec", "rails", "db:prepare"]
         proc = subprocess.Popen(migrate_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        
-        # Stream output to show progress
         for line in proc.stdout:
-            # Filter noise
-            if "Invoke" in line or "Execute" in line: continue
+            if "Invoke" in line or "Execute" in line:
+                continue
             print(f"       > {line.strip()}")
-            
         proc.wait()
-        
         if proc.returncode == 0:
-            print("    [OK] Base de datos Chatwoot preparada exito.")
+            print("    [OK] Base de datos Chatwoot preparada correctamente.")
         else:
             print("    [ERROR] Fallo en migración.")
 
@@ -239,7 +239,9 @@ def fix_evolution():
             print(f"    [ERROR] No se pudo crear la instancia: {res_create}")
             return
     else:
-        target = instances[0].get('instanceName')
+        # In Evolution v2, instanceName might be nested inside an 'instance' object or be just 'name'
+        first_instance = instances[0]
+        target = first_instance.get('name') or first_instance.get('instanceName') or first_instance.get('instance', {}).get('instanceName')
         print(f"    [INFO] Active instance detected: {target}")
 
     # Evolution v2.x Integration Mapping
@@ -301,12 +303,16 @@ def fix_database():
     if not check_service("Postgres Core", cmd=["docker", "exec", "db_core", "pg_isready", "-U", "root_admin", "-d", "postgres"]):
         return
 
-    users = ["chatwoot_user", "evolution_user", "n8n_user"]
-    for user in users:
+    users = {
+        "chatwoot_user": ENV.get('CHATWOOT_DB_PASSWORD', 'HackUN1991.1'),
+        "evolution_user": ENV.get('EVOLUTION_DB_PASSWORD', 'HackUN1991.1'),
+        "n8n_user": ENV.get('N8N_DB_PASSWORD', 'HackUN1991.1')
+    }
+    for user, pwd in users.items():
         print(f"    [FIX] Garantizando permisos para {user}...")
         
         # 2. Proactive Fix: Create user if it doesn't exist (Idempotent)
-        sql_create = f"DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '{user}') THEN CREATE ROLE {user} WITH LOGIN SUPERUSER PASSWORD 'pass_placeholder'; END IF; END $$;"
+        sql_create = f"DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '{user}') THEN CREATE ROLE {user} WITH LOGIN SUPERUSER PASSWORD '{pwd}'; ELSE ALTER ROLE {user} WITH PASSWORD '{pwd}'; END IF; END $$;"
         cmd_create = ["docker", "exec", "db_core", "psql", "-U", "root_admin", "-d", "postgres", "-c", sql_create]
         
         # Retry loop for creation (handles "shutting down" or locked DB)

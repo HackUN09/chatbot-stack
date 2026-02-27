@@ -4,7 +4,7 @@ services:
     container_name: cloudflared_tunnel
     restart: always
     env_file: ../../.env
-    command: tunnel --no-autoupdate run --token eyJhIjoiMDg2NDMwMjQ4Y2RhNWYwYmE5ZWVjMjRmZTc4YjBhMTAiLCJ0IjoiZDFiY2U5ODktNzRhNi00MzhlLWIzNTItZTM3MTk1ZDI2YjYyIiwicyI6Ik5qUmtaRE5tT1dVdE5XTTNZUzAwWkdWbExXRXdOemt0TTJaa1lqaG1NelEwTnpsaSJ9
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     networks:
       - secure-net
     deploy:

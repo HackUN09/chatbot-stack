@@ -278,7 +278,8 @@ docker logs minio-core --tail 50
 cat .env | grep S3_ENDPOINT
 ```
 
-**Solución**: `S3_ENDPOINT` debe ser el dominio público: `s3.tudominio.com` (no una IP interna).
+**Solución**: `S3_ENDPOINT` debe ser la URL **interna** del container: `http://minio-core:9000` (para que Chatwoot/Evolution puedan subir archivos desde dentro de Docker).
+Para las URLs **públicas** que ve el navegador del agente, usa `STORAGE_CDN_HOST=https://s3.tudominio.com`.
 
 ### Problema: QR Code no aparece
 
@@ -289,9 +290,10 @@ cat .env | grep S3_ENDPOINT
 docker logs app_evolution --tail 200 | grep -i "qr\|baileys"
 ```
 
-**Solución**: Ya está configurado con `CONFIG_SESSION_PHONE_VERSION` actualizado. Si persiste, espera 2-3 minutos o reinicia el contenedor:
+**Solución**: Ya está configurado con `CONFIG_SESSION_PHONE_VERSION` actualizado. Si persiste:
 ```bash
 docker restart app_evolution
+docker logs app_evolution --tail 50 | grep -i qr
 ```
 
 ---

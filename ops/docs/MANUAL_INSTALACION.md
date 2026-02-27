@@ -151,7 +151,7 @@ docker compose -f modules/02-apps/docker-compose.yml restart app_evolution
 **Causa**: Database no ha terminado de inicializarse.
 **Solución**:
 ```bash
-docker logs chatwoot --tail 100
+docker logs chatwoot-web --tail 100
 # Espera a ver: "Listening on http://0.0.0.0:3000"
 ```
 
@@ -164,12 +164,15 @@ docker logs chatwoot --tail 100
 **Solución**: 
 ```bash
 # Verificar estado de MinIO
-docker ps | grep minio-core
-# Debe mostrar: (healthy)
+docker ps | grep minio-core   # → (healthy)
 
-# Verificar que los buckets existen
-docker logs 01-infra-create-buckets-1
-# Debe terminar con: "✅ Buckets created successfully!"
+# Verificar buckets y política pública
+docker exec minio-core mc alias set local http://localhost:9000 minioadmin $(grep MINIO_ROOT_PASSWORD .env | cut -d= -f2)
+docker exec minio-core mc anonymous get local/evolution-media
+docker exec minio-core mc anonymous get local/chatwoot-storage
+
+# Si no están configurados, ejecuta Opción 4 del sistema_maestro.sh
+./sistema_maestro.sh  # → Opción 4: REPAIR & SYNC
 ```
 
 ---

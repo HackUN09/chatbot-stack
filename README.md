@@ -140,7 +140,7 @@ chatbot-stack/
 
 ### Chatwoot no carga
 ```bash
-docker logs chatwoot --tail 100
+docker logs chatwoot-web --tail 100
 # Espera: "Listening on http://0.0.0.0:3000"
 ```
 
@@ -150,12 +150,26 @@ docker logs app_evolution | grep -i "qr"
 # Ya configurado con WhatsApp Web v2.3000.1033351060
 ```
 
-### Multimedia: Imágenes o stickers no se envían
-✅ **El sistema ahora crea automáticamente los buckets de S3** (`chatwoot-storage`, `evolution-media`) al iniciar.  
-Si hay problemas, verifica que el servicio `minio-core` esté saludable:
+### n8n no conecta / credenciales inválidas
 ```bash
-docker ps | grep minio-core
-# Debe mostrar: (healthy)
+docker logs app_n8n_editor --tail 50
+# El primer usuario se crea en el primer acceso a https://n8n.tudominio.com
+```
+
+### Multimedia: Imágenes o stickers no se muestran en Chatwoot
+✅ **El sistema ahora configura automáticamente los buckets S3 con acceso público.**  
+Ejecuta la opción 4 (REPAIR & SYNC) para re-aplicar:
+```bash
+./sistema_maestro.sh
+# → Opción 4: REPAIR & SYNC
+```
+O verifica manualmente:
+```bash
+# MinIO debe estar healthy
+docker ps | grep minio-core  # → (healthy)
+# Verificar buckets con política pública
+docker exec minio-core mc anonymous get local/evolution-media
+docker exec minio-core mc anonymous get local/chatwoot-storage
 ```
 
 ---
