@@ -126,7 +126,7 @@ services:
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       S3_BUCKET: ${EVOLUTION_BUCKET}
       S3_PORT: 9000
-      S3_ENDPOINT: http://minio-core:9000
+      S3_ENDPOINT: minio-core
       S3_REGION: us-east-1
       S3_FORCE_PATH_STYLE: "true"
       S3_USE_SSL: "false"
