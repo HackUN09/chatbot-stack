@@ -70,6 +70,7 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_API_CORS_ALLOW_ORIGIN: "*"
     volumes:
       - ../../persistence/minio:/data
     networks:
@@ -98,7 +99,7 @@ services:
       minio-core:
         condition: service_healthy
     entrypoint: >
-      /bin/sh -c " echo 'Waiting for MinIO...' && until mc alias set minio http://minio-core:9000 '${MINIO_ROOT_USER}' '${MINIO_ROOT_PASSWORD}'; do echo '...waiting' && sleep 1; done; echo 'Creating buckets...' && mc mb --ignore-existing minio/chatwoot-storage && mc mb --ignore-existing minio/evolution-media && echo 'Setting policies...' && mc anonymous set download minio/evolution-media && echo '✅ Buckets created successfully!' "
+      /bin/sh -c " echo 'Waiting for MinIO...' && until mc alias set minio http://minio-core:9000 '${MINIO_ROOT_USER}' '${MINIO_ROOT_PASSWORD}'; do echo '...waiting' && sleep 1; done; echo 'Creating buckets...' && mc mb --ignore-existing minio/chatwoot-storage && mc mb --ignore-existing minio/evolution-media && echo 'Setting policies...' && mc anonymous set download minio/evolution-media && mc anonymous set download minio/chatwoot-storage && echo '✅ Buckets created successfully!' "
     networks:
       - secure-net
 

@@ -23,8 +23,10 @@ services:
       STORAGE_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
       STORAGE_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
       STORAGE_ENDPOINT: http://minio-core:9000
+      STORAGE_CDN_HOST: https://s3.${DOMAIN}
       STORAGE_FORCE_PATH_STYLE: "true"
       STORAGE_REGION: us-east-1
+      FORCE_SSL: "true"
       RAILS_SERVE_STATIC_FILES: "true"
       RAILS_LOG_TO_STDOUT: "true"
     # Auto-run DB prepare + Create admin if not exists (Idempotent)
@@ -82,8 +84,10 @@ services:
       STORAGE_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
       STORAGE_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
       STORAGE_ENDPOINT: http://minio-core:9000
+      STORAGE_CDN_HOST: https://s3.${DOMAIN}
       STORAGE_FORCE_PATH_STYLE: "true"
       STORAGE_REGION: us-east-1
+      FORCE_SSL: "true"
     command: bundle exec sidekiq -C config/sidekiq.yml
     volumes:
       - chatwoot_data:/app/storage
@@ -122,12 +126,15 @@ services:
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       S3_BUCKET: ${EVOLUTION_BUCKET}
       S3_PORT: 9000
-      S3_ENDPOINT: minio-core
+      S3_ENDPOINT: http://minio-core:9000
       S3_REGION: us-east-1
       S3_FORCE_PATH_STYLE: "true"
       S3_USE_SSL: "false"
       # Chatwoot Integration
       CHATWOOT_ENABLED: "true"
+      CHATWOOT_URL: ${CHATWOOT_URL}
+      CHATWOOT_ACCOUNT_ID: ${CHATWOOT_ACCOUNT_ID}
+      CHATWOOT_TOKEN: ${CHATWOOT_GLOBAL_TOKEN}
       CHATWOOT_MESSAGE_REOPEN: "true"
       CHATWOOT_MESSAGE_WA_INDICATOR: "true"
       CHATWOOT_IMPORT_CONTACTS: "true"
