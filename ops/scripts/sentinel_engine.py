@@ -144,9 +144,9 @@ def setup_chatwoot():
                 print(f"    [OK] Admin configurado. Token: {token[:8]}...")
                 # Auto-inject into .env
                 if os.path.exists('.env'):
-                    with open('.env', 'r') as f:
+                    with open('.env', 'r', encoding='utf-8') as f:
                         lines = f.readlines()
-                    with open('.env', 'w') as f:
+                    with open('.env', 'w', encoding='utf-8') as f:
                         for line in lines:
                             if line.startswith('CHATWOOT_GLOBAL_TOKEN='):
                                 f.write(f'CHATWOOT_GLOBAL_TOKEN={token}\n')
@@ -278,7 +278,9 @@ def check_service(name, url=None, cmd=None, retries=60):
     for i in range(retries):
         try:
             if url:
-                req = urllib.request.Request(url, method='GET')
+                # Use 127.0.0.1 instead of localhost for Windows reliability
+                robust_url = url.replace("localhost", "127.0.0.1")
+                req = urllib.request.Request(robust_url, method='GET')
                 with urllib.request.urlopen(req, timeout=5) as response:
                     # Accepts any response that implies the server is processing requests
                     if response.status in [200, 401, 301, 302, 404, 500]:
