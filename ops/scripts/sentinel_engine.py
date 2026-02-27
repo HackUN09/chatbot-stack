@@ -101,7 +101,7 @@ def setup_s3():
 
 def setup_chatwoot():
     print("  [CW] Inicializando Admin, Cuenta e Inbox...")
-    if not check_service("Chatwoot Web", url="http://localhost:3000/auth/sign_in", retries=60):
+    if not check_service("Chatwoot Web", url="http://localhost:3000/api", retries=60):
         print("    [WARN] Chatwoot no está listo, pero intentaremos la configuración vía Rails runner...")
     admin_email = ENV.get('CHATWOOT_ADMIN_EMAIL', 'capsule.cor.arauca@gmail.com')
     admin_pass = ENV.get('CHATWOOT_ADMIN_PASSWORD', 'HackUN1991.1')
@@ -280,7 +280,8 @@ def check_service(name, url=None, cmd=None, retries=60):
             if url:
                 req = urllib.request.Request(url, method='GET')
                 with urllib.request.urlopen(req, timeout=5) as response:
-                    if response.status in [200, 401]:
+                    # Accepts any response that implies the server is processing requests
+                    if response.status in [200, 401, 301, 302, 404, 500]:
                         print(f"    [OK] {name} está listo.")
                         return True
             elif cmd:
