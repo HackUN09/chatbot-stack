@@ -1,301 +1,230 @@
-# 🔧 Guía de Configuración Manual | Sentinel OS v11.0
+# 🔧 Configuración Manual de Servicios | Sentinel OS v11.0
 
-**Configuración detallada y quirúrgica de cada componente del ecosistema**
-
----
-
-## 📑 Tabla de Contenidos
-
-1. [Variables de Entorno Explicadas](#variables-de-entorno-explicadas)
-2. [Configuración Manual de Chatwoot](#configuración-manual-de-chatwoot)
-3. [Integración Chatwoot ↔ Evolution API](#integración-chatwoot--evolution-api)
-4. [Configuración de n8n](#configuración-de-n8n)
-5. [MinIO S3 Storage](#minio-s3-storage)
-6. [Optimización de PostgreSQL](#optimización-de-postgresql)
-7. [Troubleshooting Avanzado](#troubleshooting-avanzado)
+> *Referencia exhaustiva de las 47 variables de entorno y sus interacciones entre servicios*
 
 ---
 
-## 🔐 Variables de Entorno Explicadas
+## 📐 Modelo de Configuración
 
-### Capa 01: Gateway & Dominio
+El sistema utiliza un **modelo de configuración centralizado**: un único archivo `.env` en la raíz que alimenta a todos los servicios vía `env_file` y `${VARIABLE}` en los `docker-compose.yml`.
 
-```bash
-DOMAIN=isekaichat.com
-# Tu dominio principal sin www
-
-CLOUDFLARE_TUNNEL_TOKEN=eyJ...
-# Token de Cloudflare Zero Trust Tunnel
 ```
-
-### Capa 02: Chatwoot Core
-
-```bash
-CHATWOOT_GLOBAL_TOKEN=wDxv4X3jez9q9jhiCJBDtReG
-# API Token obtenido desde Configuración de Perfil en Chatwoot
-# CRÍTICO: Necesario para la integración con Evolution API
-
-CHATWOOT_ACCOUNT_ID=1
-# ID de cuenta en Chatwoot (usualmente 1 para la primera cuenta)
-
-CHATWOOT_URL=http://chatwoot-web:3000
-# URL interna del contenedor Chatwoot (NO uses la URL pública aquí)
-
-FRONTEND_URL=https://chat.isekaichat.com
-# URL pública del frontend de Chatwoot
+                    ┌─────────────┐
+                    │   .env      │ ← Fuente Única de Verdad
+                    └──────┬──────┘
+                           │
+          ┌────────────────┼────────────────┐
+          ▼                ▼                ▼
+    ┌──────────┐    ┌──────────┐    ┌──────────┐
+    │ 01-infra │    │ 02-apps  │    │ 03-tunnel│
+    │ compose  │    │ compose  │    │ compose  │
+    └──────────┘    └──────────┘    └──────────┘
 ```
-
-### Capa 03: Infraestructura
-
-```bash
-POSTGRES_ROOT_PASSWORD=HackUN1991.1
-# Password del superusuario postgres
-
-REDIS_PASSWORD=HackUN1991.1  
-# Password de Redis (usada por Chatwoot y Evolution)
-
-MINIO_ROOT_PASSWORD=HackUN1991.1
-# Password de MinIO S3 Storage
-```
-
-### Capa 04: Evolution API
-
-```bash
-SERVER_URL=https://api.isekaichat.com
-# URL pública de Evolution API
-
-EVOLUTION_API_KEY=HackUN1991.1
-# API Key para autenticación en Evolution
-
-DATABASE_CONNECTION_URI=postgresql://evolution_user:password@db_core:5432/evolution?schema=public
-# URI completa de conexión a PostgreSQL
-
-CONFIG_SESSION_PHONE_VERSION=2.3000.1033351060
-# Versión de WhatsApp Web a emular (actualizado Feb 2026)
-```
-
----
-
-## 📱 Configuración Manual de Chatwoot
-
-### Crear Primera Cuenta
-
-1. Accede a `https://chat.tudominio.com`
-2. Completa el formulario inicial:
-   - **Nombre Completo**: Tu nombre
-   - **Email**: Email del administrador
-   - **Password**: Contraseña segura (mín. 8 caracteres)
-
-### Configurar Inbox de WhatsApp
 
 > [!IMPORTANT]
-> **NO** crees inboxes manualmente. Evolution API los creará automáticamente cuando configures la integración.
-
-### Obtener API Token
-
-1. Click en tu avatar (esquina inferior izquierda)
-2. **Configuración de Perfil**
-3. Sección **Access Token**
-4. Click en **Copy**
-5. Actualiza tu `.env`:
-```bash
-CHATWOOT_GLOBAL_TOKEN=tu_token_copiado_aqui
-```
+> Nunca edites variables directamente en los `docker-compose.yml`. Siempre edita el `.env` y reinicia el servicio afectado.
 
 ---
 
-## 🔗 Integración Chatwoot ↔ Evolution API
+## 🗺️ Mapa Completo de Variables por Servicio
 
-### Opción A: Configuración Automática (Recomendado)
+### [01] 🌐 Dominio y Túnel Cloudflare
 
-```bash
-./sistema_maestro.sh
-# Selecciona Opción 4: REPAIR & SYNC
-```
+| Variable | Valor de Ejemplo | Consumido por |
+|:---------|:-----------------|:-------------|
+| `DOMAIN` | `miempresa.com` | Chatwoot, Evolution, n8n (construyen sus URLs) |
+| `CLOUDFLARE_TUNNEL_TOKEN` | `eyJhIjoiMD...` | cloudflared_tunnel |
 
-El sistema detectará automáticamente tu token de Chatwoot y configurará todas las instancias de Evolution.
-
-### Opción B: Configuración Manual
-
-1. Accede a Evolution API Manager: `https://api.tudominio.com/manager`
-2. Crea una nueva instancia o selecciona una existente
-3. Ve a **Settings → Chatwoot**
-4. Rellena el formulario:
-
+**Cómo funciona**: Los `docker-compose.yml` usan `${DOMAIN}` para construir URLs dinámicamente:
 ```yaml
-Chatwoot Enabled: ON
-Chatwoot URL: http://chatwoot-web:3000
-Account ID: 1
-Token: wDxv4X3jez9q9jhiCJBDtReG  # Tu token real
-Sign Messages: ON
-Sign Delimiter: \n
-Name Inbox: WhatsApp
-Organization: Tu Empresa
-Conversation Pending: OFF
-Reopen Conversation: ON
-Import Contacts: ON
-Import Messages: ON
-Days Limit: 60
-Auto Create: ON
-```
-
-5. Click en **Save**
-
-### Verificación de Integración
-
-Verifica que la integración funciona correctamente:
-
-```bash
-# Ver logs de Evolution API
-docker logs app_evolution --tail 100 | grep -i "chatwoot"
-
-# Deberías ver líneas como:
-# "Init message chatwoot bot contact"
-# "Chatwoot sync completed"
+# En Chatwoot:
+FRONTEND_URL: https://chat.${DOMAIN}
+# En Evolution:
+SERVER_URL: https://api.${DOMAIN}
+# En n8n:
+WEBHOOK_URL: https://n8n.${DOMAIN}/
 ```
 
 ---
 
-## ⚡ Configuración de n8n
+### [02] 💬 Chatwoot CRM
 
-### Primer Acceso
+| Variable | Propósito | Valor por defecto |
+|:---------|:----------|:-----------------|
+| `CHATWOOT_ADMIN_EMAIL` | Email del primer admin | — |
+| `CHATWOOT_ADMIN_PASSWORD` | Password del primer admin | — |
+| `CHATWOOT_GLOBAL_TOKEN` | Token API para integración con Evolution | Se autogenera |
+| `CHATWOOT_ACCOUNT_ID` | ID de la cuenta principal | `1` |
+| `CHATWOOT_URL` | URL interna (Docker DNS) | `http://chatwoot-web:3000` |
+| `FRONTEND_URL` | URL pública del CRM | `https://chat.${DOMAIN}` |
+| `SECRET_KEY_BASE` | Clave criptográfica de Rails (64 bytes hex) | — |
 
-1. Accede a `https://n8n.tudominio.com`
-2. Crea tu cuenta de administrador
-3. Email: El configurado en `.env` (`CHATWOOT_ADMIN_EMAIL`)
-4. Password: El configurado en `.env` (`CHATWOOT_ADMIN_PASSWORD`)
+> [!CAUTION]
+> `CHATWOOT_URL` **SIEMPRE** debe ser `http://chatwoot-web:3000`. Es la URL INTERNA que Evolution usa para comunicarse con Chatwoot dentro de Docker. Nunca pongas la URL pública aquí.
 
-### Conectar n8n con Evolution API
-
-1. En n8n, crea un nuevo workflow
-2. Agrega un nodo **Webhook**
-3. Configura la URL: `https://n8n.tudominio.com/webhook/whatsapp`
-4. En Evolution API, ve a **Settings → Webhooks**
-5. Agrega la URL del webhook de n8n
-
-### Conectar n8n con Chatwoot
-
-1. En n8n, agrega un nodo **HTTP Request**
-2. Configura:
-   - **Method**: POST
-   - **URL**: `http://chatwoot:3000/api/v1/accounts/1/conversations`
-   - **Headers**:
-     ```
-     api_access_token: tu_chatwoot_token
-     Content-Type: application/json
-     ```
-
----
-
-## 🪣 MinIO S3 Storage
-
-### Acceso a la Consola
-
-- **URL**: `https://s3.tudominio.com`
-- **Usuario**: `minioadmin`
-- **Password**: El de tu `.env` (`MINIO_ROOT_PASSWORD`)
-
-### Buckets S3 (Creación Automática)
-
-✅ **Los buckets se crean AUTOMÁTICAMENTE** al iniciar el stack por primera vez.
-
-El servicio `create-buckets` (basado en `minio/mc`) se ejecuta una sola vez y:
-1. Espera a que MinIO esté saludable
-2. Crea `chatwoot-storage` (privado)
-3. Crea `evolution-media` (público para descarga)
-4. Aplica las políticas de acceso correctas
-
-Para verificar que funcionó:
-```bash
-docker logs 01-infra-create-buckets-1
-# Debe terminar con: "✅ Buckets created successfully!"
+**Flujo de obtención del CHATWOOT_GLOBAL_TOKEN**:
 ```
-
-> [!NOTE]
-> Si necesitas recrear los buckets, simplemente reinicia el servicio:
-> ```bash
-> docker restart 01-infra-create-buckets-1
-> ```
-
----
-
-## 🐘 Optimización de PostgreSQL
-
-### Ajustes Recomendados para 4GB RAM
-
-Edita `modules/01-infra/docker-compose.yml`:
-
-```yaml
-db_core:
-  command: >
-    postgres
-    -c shared_buffers=256MB
-    -c effective_cache_size=1GB
-    -c work_mem=16MB
-    -c maintenance_work_mem=128MB
-    -c max_connections=100
-```
-
-### Backup Manual de Base de Datos
-
-```bash
-# Backup de todas las bases
-docker exec db_core pg_dumpall -U postgres > backup_$(date +%Y%m%d).sql
-
-# Restaurar desde backup
-cat backup_20260212.sql | docker exec -i db_core psql -U postgres
+1. sistema_maestro.sh → Opción 1 despliega Chatwoot
+2. Chatwoot crea admin automáticamente con CHATWOOT_ADMIN_EMAIL
+3. sentinel_engine.py consulta la API y obtiene el access_token
+4. Lo inyecta automáticamente en el .env
+5. Evolution API lo usa para sincronizar mensajes
 ```
 
 ---
 
-## 🩺 Troubleshooting Avanzado
+### [03] 🛠️ Infraestructura Core
 
-### Problema: Evolution API no conecta a Chatwoot
+| Variable | Consumido por | Notas |
+|:---------|:-------------|:------|
+| `POSTGRES_ROOT_PASSWORD` | db_core (PostgreSQL) | Superusuario `root_admin` |
+| `REDIS_PASSWORD` | cache_core (Redis) | Protege el acceso a Redis |
 
-**Síntomas**: Los mensajes de WhatsApp no aparecen en Chatwoot
+**Bases de datos creadas automáticamente** por `01-segregation.sh`:
 
-**Diagnóstico**:
-```bash
-# Verificar conectividad interna
-docker exec app_evolution curl -I http://chatwoot:3000
+| Base de Datos | Usuario | Extensiones | Servicio |
+|:-------------|:--------|:-----------|:---------|
+| `chatwoot` | `chatwoot_user` | pgcrypto, uuid-ossp | Chatwoot CRM |
+| `evolution` | `evolution_user` | pgcrypto, uuid-ossp | Evolution API |
+| `n8n` | `n8n_user` | pgcrypto, uuid-ossp | n8n Automation |
 
-# Verificar token
-docker exec app_evolution printenv | grep CHATWOOT
+**Distribución de Redis Indexes**:
+
+| Index | Servicio | Función |
+|:-----:|:---------|:--------|
+| 0 | Reservado | — |
+| 1 | Chatwoot (Sidekiq + ActionCable) | Cola de jobs y WebSockets |
+| 2 | Evolution API | Caché de sesiones WhatsApp |
+
+---
+
+### [04] 🧬 Contraseñas DB por Servicio
+
+| Variable | DB Usuario | URI Resultante |
+|:---------|:----------|:---------------|
+| `CHATWOOT_DB_PASSWORD` | `chatwoot_user` | `postgresql://chatwoot_user:PASS@db_core:5432/chatwoot` |
+| `EVOLUTION_DB_PASSWORD` | `evolution_user` | `postgresql://evolution_user:PASS@db_core:5432/evolution` |
+| `N8N_DB_PASSWORD` | `n8n_user` | `postgresql://n8n_user:PASS@db_core:5432/n8n` |
+
+> [!WARNING]
+> Las contraseñas de las URIs en `DATABASE_CONNECTION_URI` y `CACHE_REDIS_URI` deben coincidir **exactamente** con las variables individuales. Si cambias una, cambia todas las ocurrencias.
+
+---
+
+### [05] 🔑 API Keys y Cifrado
+
+| Variable | Servicio | Propósito |
+|:---------|:---------|:----------|
+| `EVOLUTION_API_KEY` | Evolution API | Header `apikey` para autenticar requests |
+| `N8N_ENCRYPTION_KEY` | n8n | Cifra credenciales guardadas en workflows |
+| `N8N_USER_MANAGEMENT_JWT_SECRET` | n8n | Firma tokens JWT de sesión |
+
+---
+
+### [06] 📱 Evolution API — WhatsApp
+
+| Variable | Propósito |
+|:---------|:----------|
+| `SERVER_URL` | URL pública de Evolution (`https://api.${DOMAIN}`) |
+| `DATABASE_CONNECTION_URI` | Conexión completa a PostgreSQL |
+| `CACHE_REDIS_URI` | Conexión a Redis (index 2) |
+| `CONFIG_SESSION_PHONE_VERSION` | Versión de WhatsApp Web emulada por Baileys |
+
+---
+
+### [07] 🎤 Audio Transcoding
+
+| Variable | Valor | Propósito |
+|:---------|:------|:----------|
+| `AUDIO_CONVERTER_ENABLED` | `true` | Activa la transcodificación |
+| `WA_BUSINESS_AUDIO_CHANNEL` | `true` | Canal de audio WhatsApp Business |
+| `API_AUDIO_CONVERTER` | `http://evolution_audio_converter:4040/process-audio` | URL interna del convertidor |
+| `EVOLUTION_AUDIO_CONVERTER_FORCE` | `true` | Forzar incluso si el formato parece correcto |
+| `AUDIO_CONVERTER_KEY` | (clave) | Autenticación del servicio |
+
+**Problema resuelto**: WhatsApp envía audio como `.opus` (codec Opus). Los navegadores no reproducen `audio/opus` inline. El Audio Converter transcodifica a OGG/Vorbis que es universalmente compatible.
+
 ```
-
-**Solución**: Asegúrate de que `CHATWOOT_URL` en `.env` sea `http://chatwoot-web:3000` (no HTTPS).
-
-### Problema: Imágenes no cargan en Chatwoot
-
-**Síntomas**: Los mensajes con imágenes muestran un ícono roto
-
-**Diagnóstico**:
-```bash
-# Verificar MinIO
-docker logs minio-core --tail 50
-
-# Verificar S3_ENDPOINT
-cat .env | grep S3_ENDPOINT
-```
-
-**Solución**: `S3_ENDPOINT` debe ser la URL **interna** del container: `http://minio-core:9000` (para que Chatwoot/Evolution puedan subir archivos desde dentro de Docker).
-Para las URLs **públicas** que ve el navegador del agente, usa `STORAGE_CDN_HOST=https://s3.tudominio.com`.
-
-### Problema: QR Code no aparece
-
-**Síntomas**: Pantalla en blanco al intentar conectar WhatsApp
-
-**Diagnóstico**:
-```bash
-docker logs app_evolution --tail 200 | grep -i "qr\|baileys"
-```
-
-**Solución**: Ya está configurado con `CONFIG_SESSION_PHONE_VERSION` actualizado. Si persiste:
-```bash
-docker restart app_evolution
-docker logs app_evolution --tail 50 | grep -i qr
+WhatsApp → .opus (audio/opus) → AudioConverter → .ogg (audio/ogg) → MinIO → Browser ✅
 ```
 
 ---
 
-**Documentación v11.0** | Desarrollado por **HackUN09** & **Antigravity AI**
+### [08] 🪣 MinIO S3 Storage
+
+| Variable | Valor | Consumidor |
+|:---------|:------|:-----------|
+| `MINIO_ROOT_USER` | `minioadmin` | MinIO, Evolution, Chatwoot |
+| `MINIO_ROOT_PASSWORD` | (password) | MinIO, Evolution, Chatwoot |
+| `S3_ENABLED` | `true` | Evolution API |
+| `S3_ACCESS_KEY` | = `MINIO_ROOT_USER` | Evolution API |
+| `S3_SECRET_KEY` | = `MINIO_ROOT_PASSWORD` | Evolution API |
+| `S3_REGION` | `us-east-1` | Requerido por SDK |
+| `S3_PORT` | `9000` | Evolution API |
+| `S3_ENDPOINT` | `core_minio` | Evolution API |
+| `S3_USE_SSL` | `false` | Comunicación interna sin SSL |
+| `S3_FORCE_PATH_STYLE` | `true` | MinIO requiere path-style |
+| `EVOLUTION_BUCKET` | `evolution-media` | Evolution API |
+| `CHATWOOT_BUCKET` | `chatwoot-storage` | Chatwoot |
+| `STORAGE_CDN_HOST` | `https://s3.${DOMAIN}` | Chatwoot (URLs públicas) |
+
+> [!CAUTION]
+> `S3_ENDPOINT` debe ser **`core_minio`** (nombre del contenedor Docker). NO `minio-core`, NO `localhost`, NO `http://core_minio:9000`. Solo el hostname sin protocolo ni puerto.
+
+**Buckets y sus políticas**:
+
+| Bucket | Política | Función |
+|:-------|:---------|:--------|
+| `chatwoot-storage` | `download` (público) | Archivos adjuntos del CRM |
+| `evolution-media` | `download` (público) | Multimedia de WhatsApp |
+
+---
+
+### [09–12] Variables Complementarias
+
+| Sección | Variables | Propósito |
+|:--------|:---------|:----------|
+| [09] Admin Panels | `PGADMIN_DEFAULT_EMAIL/PASSWORD` | Acceso a PgAdmin (localhost:5050) |
+| [10] n8n | `N8N_HOST`, `WEBHOOK_URL` | Hostname y webhooks públicos |
+| [11] AEGIS | `N8N_EXECUTIONS_DATA_*` | Auto-poda de ejecuciones (7 días) |
+| [12] Import CW | `CHATWOOT_IMPORT_DATABASE_CONNECTION_URI` | Importar historial Evolution→Chatwoot |
+
+---
+
+## 🔬 Diagnóstico Avanzado
+
+### Verificar que todos los servicios se comunican:
+
+```bash
+# 1. PostgreSQL acepta conexiones
+docker exec db_core pg_isready -U root_admin
+
+# 2. Redis responde
+docker exec cache_core redis-cli -a $(grep REDIS_PASSWORD .env | cut -d= -f2) ping
+
+# 3. MinIO está healthy y tiene buckets
+docker exec core_minio mc alias set local http://localhost:9000 minioadmin $(grep MINIO_ROOT_PASSWORD .env | cut -d= -f2)
+docker exec core_minio mc ls local/
+
+# 4. Chatwoot responde
+curl -s http://localhost:3000/auth/sign_in | head -5
+
+# 5. Evolution API responde
+curl -s http://localhost:8080/ | python -m json.tool
+
+# 6. Audio Converter online
+docker exec evolution_audio_converter wget -qO- http://localhost:4040 || echo "Esperando..."
+
+# 7. n8n accesible
+curl -s http://localhost:5678/healthz
+```
+
+---
+
+<div align="center">
+
+**Sentinel OS v11.0** — *Referencia de Configuración*
+
+Desarrollado con 🧬 por **[HackUN09](https://github.com/HackUN09)** & **Antigravity AI**
+
+</div>

@@ -62,9 +62,9 @@ services:
   # ==========================================
   # MINIO (S3 Compatible)
   # ==========================================
-  minio-core:
+  core_minio:
     image: minio/minio:RELEASE.2024-11-07T00-52-20Z
-    container_name: minio-core
+    container_name: core_minio
     restart: always
     command: server /data --console-address ":9001"
     environment:
@@ -96,10 +96,10 @@ services:
   create-buckets:
     image: minio/mc:RELEASE.2024-11-05T11-29-45Z
     depends_on:
-      minio-core:
+      core_minio:
         condition: service_healthy
     entrypoint: >
-      /bin/sh -c " echo 'Waiting for MinIO...' && until mc alias set minio http://minio-core:9000 '${MINIO_ROOT_USER}' '${MINIO_ROOT_PASSWORD}'; do echo '...waiting' && sleep 1; done; echo 'Creating buckets...' && mc mb --ignore-existing minio/chatwoot-storage && mc mb --ignore-existing minio/evolution-media && echo 'Setting policies...' && mc anonymous set download minio/evolution-media && mc anonymous set download minio/chatwoot-storage && echo '✅ Buckets created successfully!' "
+      /bin/sh -c " echo 'Waiting for MinIO...' && until mc alias set minio http://core_minio:9000 '${MINIO_ROOT_USER}' '${MINIO_ROOT_PASSWORD}'; do echo '...waiting' && sleep 1; done; echo 'Creating buckets...' && mc mb --ignore-existing minio/chatwoot-storage && mc mb --ignore-existing minio/evolution-media && echo 'Setting policies...' && mc anonymous set download minio/evolution-media && mc anonymous set download minio/chatwoot-storage && echo '✅ Buckets created successfully!' "
     networks:
       - secure-net
 

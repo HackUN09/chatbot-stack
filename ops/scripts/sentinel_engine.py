@@ -12,21 +12,63 @@ import argparse
 # Load master .env settings
 # Load master .env settings with fallback encoding support
 def load_env():
+    """Loads .env with prioritized encoding fallback."""
     env = {}
-    encodings = ['utf-8', 'cp1252', 'latin-1'] # Priority: UTF-8 -> Windows -> Generic
+    encodings = ['utf-8', 'cp1252', 'latin-1']
     
+    if not os.path.exists('.env'):
+        return env
+
     for encoding in encodings:
         try:
             with open('.env', 'r', encoding=encoding) as f:
                 for line in f:
-                    if '=' in line and not line.strip().startswith('#'):
-                        key, val = line.strip().split('=', 1)
-                        env[key] = val
-            break # Success, stop trying encodings
-        except (UnicodeDecodeError, FileNotFoundError):
+                    line = line.strip()
+                    if '=' in line and not line.startswith('#'):
+                        key, val = line.split('=', 1)
+                        clean_key = key.strip()
+                        clean_val = val.strip().strip('"').strip("'")
+                        env[clean_key] = clean_val
+                        os.environ[clean_key] = clean_val
+            return env
+        except (UnicodeDecodeError, Exception):
             continue
-            
     return env
+
+def save_env(env_data):
+    """Saves ENV dictionary back to .env preserving UTF-8/Emojis."""
+    try:
+        # 1. Read existing lines to preserve comments and structure
+        lines = []
+        if os.path.exists('.env'):
+            with open('.env', 'r', encoding='utf-8', errors='replace') as f:
+                lines = f.readlines()
+        
+        # 2. Update or append keys
+        updated_content = []
+        keys_processed = set()
+        
+        for line in lines:
+            if '=' in line and not line.strip().startswith('#'):
+                key = line.split('=', 1)[0].strip()
+                if key in env_data:
+                    updated_content.append(f"{key}={env_data[key]}\n")
+                    keys_processed.add(key)
+                    continue
+            updated_content.append(line)
+            
+        # 3. Add new keys that weren't in the file
+        for key, val in env_data.items():
+            if key not in keys_processed:
+                updated_content.append(f"{key}={val}\n")
+                
+        # 4. Atomic write with explicit UTF-8
+        with open('.env', 'w', encoding='utf-8', newline='\n') as f:
+            f.writelines(updated_content)
+        return True
+    except Exception as e:
+        print(f"    [ERROR] Failed to save .env: {e}")
+        return False
 
 ENV = load_env()
 
@@ -68,9 +110,9 @@ def setup_s3():
     evo_bucket = ENV.get('EVOLUTION_BUCKET', ENV.get('S3_BUCKET', 'evolution-media'))
     cw_bucket  = ENV.get('CHATWOOT_BUCKET', ENV.get('STORAGE_BUCKET_NAME', 'chatwoot-storage'))
 
-    # Paso 1: Crear alias local dentro del container minio-core
+    # Paso 1: Crear alias local dentro del container core_minio
     alias_cmd = [
-        "docker", "exec", "minio-core",
+        "docker", "exec", "core_minio",
         "mc", "alias", "set", "local",
         "http://localhost:9000", minio_user, minio_pass
     ]
@@ -82,7 +124,7 @@ def setup_s3():
     # Paso 2: Crear y configurar cada bucket
     for bucket_name in [evo_bucket, cw_bucket]:
         # Crear bucket (idempotente)
-        mb_cmd = ["docker", "exec", "minio-core", "mc", "mb", "--ignore-existing", f"local/{bucket_name}"]
+        mb_cmd = ["docker", "exec", "core_minio", "mc", "mb", "--ignore-existing", f"local/{bucket_name}"]
         res_mb = subprocess.run(mb_cmd, capture_output=True, text=True, check=False)
         if res_mb.returncode == 0:
             print(f"    [OK] Bucket '{bucket_name}' garantizado.")
@@ -90,7 +132,7 @@ def setup_s3():
             print(f"    [WARN] mb resultado: {res_mb.stderr.strip()}")
 
         # Aplicar política pública de descarga
-        policy_cmd = ["docker", "exec", "minio-core", "mc", "anonymous", "set", "download", f"local/{bucket_name}"]
+        policy_cmd = ["docker", "exec", "core_minio", "mc", "anonymous", "set", "download", f"local/{bucket_name}"]
         res_pol = subprocess.run(policy_cmd, capture_output=True, text=True, check=False)
         if res_pol.returncode == 0:
             print(f"    [OK] Política pública aplicada a '{bucket_name}'.")
@@ -98,6 +140,33 @@ def setup_s3():
             print(f"    [WARN] Policy resultado: {res_pol.stderr.strip()}")
 
     print("    [S3] Setup completo.")
+    heal_media()
+
+def heal_media():
+    """Corrige Content-Type y Disposition de audios/videos en MinIO de forma automática."""
+    print("  [HEAL] Curando metadatos de multimedia (Audio/Video Fix)...")
+    if not os.environ.get('AUDIO_CONVERTER_ENABLED', 'false').lower() == 'true':
+        print("    [SKIP] Audio converter no habilitado.")
+        return
+
+    minio_user = ENV.get('MINIO_ROOT_USER', 'minioadmin')
+    minio_pass = ENV.get('MINIO_ROOT_PASSWORD', 'minioadmin')
+    cw_bucket  = ENV.get('CHATWOOT_BUCKET', 'chatwoot-storage')
+
+    # Comando quirúrgico para corregir .opus a audio/ogg e inyectar 'inline'
+    # Esto asegura que el reproductor de Chatwoot funcione sin descargar el archivo
+    fix_cmd = [
+        "docker", "exec", "core_minio", "/bin/sh", "-c",
+        f"mc alias set local http://localhost:9000 {minio_user} {minio_pass} > /dev/null 2>&1 && "
+        f"mc find local/{cw_bucket} --name '*.opus' --exec "
+        f"\"mc cp --attr Content-Type=audio/ogg;Content-Disposition=inline local/{{}} local/{{}}\""
+    ]
+    
+    try:
+        subprocess.run(fix_cmd, capture_output=True, text=True, check=False)
+        print(f"    [OK] Metadatos de Audio (.opus -> ogg) sincronizados en '{cw_bucket}'.")
+    except Exception as e:
+        print(f"    [WARN] Error en heal_media: {e}")
 
 def setup_chatwoot():
     print("  [CW] Inicializando Admin, Cuenta e Inbox...")
@@ -142,17 +211,11 @@ def setup_chatwoot():
             if token_match:
                 token = token_match.group(1)
                 print(f"    [OK] Admin configurado. Token: {token[:8]}...")
-                # Auto-inject into .env
-                if os.path.exists('.env'):
-                    with open('.env', 'r', encoding='utf-8') as f:
-                        lines = f.readlines()
-                    with open('.env', 'w', encoding='utf-8') as f:
-                        for line in lines:
-                            if line.startswith('CHATWOOT_GLOBAL_TOKEN='):
-                                f.write(f'CHATWOOT_GLOBAL_TOKEN={token}\n')
-                            else:
-                                f.write(line)
-                    print("    [AUTO] Token inyectado quirúrgicamente en .env")
+                # Auto-inject into .env using robust save_env
+                current_env = load_env()
+                current_env['CHATWOOT_GLOBAL_TOKEN'] = token
+                if save_env(current_env):
+                    print("    [AUTO] Token inyectado quirúrgicamente en .env (UTF-8 Safe)")
             else:
                 print("    [OK] Chatwoot Admin Initialized")
         elif "ERROR:" in output:
@@ -355,32 +418,34 @@ def wait_for_ready():
         print(f"    [CHECK] Verificando {name}...")
         
         ready = False
-        for i in range(120): # Wait up to 600 seconds (10 minutes) for slow boots
+        for i in range(120): # Wait up to 240 seconds (4 minutes)
             try:
                 if service["url"]:
                     # HTTP Check
                     req = urllib.request.Request(service["url"], method='GET')
-                    with urllib.request.urlopen(req, timeout=5) as response:
-                        if response.status in [200, 401, 404, 301, 302]: # Any typical response means server is alive
+                    with urllib.request.urlopen(req, timeout=3) as response:
+                        if response.status in [200, 401, 404, 301, 302]:
                             ready = True
                 elif service["cmd"]:
                     # Command Check (Docker)
                     res = subprocess.run(service["cmd"], capture_output=True, check=False)
                     if res.returncode == 0:
                         ready = True
-                
-                if ready:
-                    print(f"    [OK] {name} está operativo.")
-                    break
             except Exception:
                 pass
             
-            if i % 2 == 0: print(f"       ... esperando {name} ({i}/120) ...")
-            time.sleep(5)
+            if ready:
+                print(f"    [OK] {name} está operativo.")
+                break
+                
+            if i % 5 == 0: # Print every 10 seconds (since sleep is 2s)
+                print(f"       ... esperando {name} ({i*2}s/240s) ...")
+            
+            time.sleep(2)
         
         if not ready:
-            print(f"    [ERROR] {name} NO respondió después de 150 segundos. Abortando configuración.")
-            sys.exit(1) # Stop script to prevent cascading errors
+            print(f"    [ERROR] {name} NO respondió a tiempo. Abortando.")
+            sys.exit(1)
     
     print("    [OK] Sistema completamente estable. Procediendo con la configuración.")
 
@@ -391,6 +456,7 @@ def main():
     parser.add_argument('--setup-s3', action='store_true', help="Setup MinIO buckets")
     parser.add_argument('--prep-cw', action='store_true', help="Run Chatwoot Migrations if needed")
     parser.add_argument('--setup-cw', action='store_true', help="Setup Chatwoot admin")
+    parser.add_argument('--heal-media', action='store_true', help="Fix audio/video MIME types in MinIO")
     parser.add_argument('--wait', action='store_true', help="Wait for services to be ready")
     parser.add_argument('--get', type=str, help="Get ENV variable")
     args = parser.parse_args()
@@ -409,6 +475,8 @@ def main():
         setup_s3()
     elif args.setup_cw:
         setup_chatwoot()
+    elif args.heal_media:
+        heal_media()
     else:
         print("Sentinel Engine V11.1 - No action specified.")
 

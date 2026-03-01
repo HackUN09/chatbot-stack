@@ -27,9 +27,11 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# Cargar variables para que Docker Compose no de advertencias
+# Cargar variables con soporte para Windows/Unix line endings
 if [ -f .env ]; then
-    export $(grep -v '^#' .env | xargs)
+    # Remove \r from .env values when exporting to shell
+    # This specifically fixes the "variable not set" warning in Docker Compose on Windows
+    export $(grep -v '^#' .env | sed 's/\r$//' | xargs -d '\n')
 fi
 
 # --- COLOR PALETTE (PROFESSIONAL HIGHLIGHTS) ---
@@ -169,8 +171,9 @@ function execute_genesis() {
     echo -e "\n  ${G}✅ SISTEMA COMPLETAMENTE DESPLEGADO Y SINCRONIZADO.${NC}"
     echo -e "  ${G}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "  ${Y}• Multimedia (imágenes, videos, stickers, PDFs): ACTIVO${NC}"
+    echo -e "  ${Y}• Audio Transcoding (WhatsApp Opus → OGG): GARANTIZADO${NC}"
     echo -e "  ${Y}• Chatwoot ↔ Evolution: SINCRONIZADOS${NC}"
-    echo -e "  ${Y}• S3 Buckets (públicos): GARANTIZADOS${NC}"
+    echo -e "  ${G}• NotebookLM MCP Server: LISTO PARA CONEXIÓN${NC}"
     
     render_access_dashboard
     

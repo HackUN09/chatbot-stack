@@ -20,12 +20,15 @@ stats = {
 lock = threading.Lock()
 
 def get_api_key():
-    try:
-        with open(".env", "r") as f:
-            for line in f:
-                if "EVOLUTION_API_KEY=" in line:
-                    return line.split("=")[1].strip()
-    except: return API_KEY
+    encodings = ['utf-8', 'cp1252', 'latin-1']
+    for enc in encodings:
+        try:
+            with open(".env", "r", encoding=enc) as f:
+                for line in f:
+                    if "EVOLUTION_API_KEY=" in line:
+                        return line.split("=")[1].strip()
+        except: continue
+    return API_KEY
 
 def send_message(msg_id):
     api_key = get_api_key()

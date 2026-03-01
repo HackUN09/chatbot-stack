@@ -1,15 +1,14 @@
 
-# 🌌 [METADATA] SENTINEL OS v17.0 - REPOSITORIO DE INTEGRIDAD
-# SECCIÓN: IGNORAR ARCHIVOS SENSIBLES EN EL FLUJO CUÁNTICO
+# 🛡️ Sentinel OS v11.0 — Git Ignore Rules
+# ============================================
 
-# --- CORES ---
+# --- SECRETS ---
 .env
 .env.bank
 .env.bak*
 .env.old*
 .env.backup*
 .env.tmp*
-*.env
 
 # --- DOCKER & PERSISTENCE ---
 persistence/
@@ -20,7 +19,10 @@ logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
+diagnostic_*.txt
+
+# --- BACKUPS (snapshots are local) ---
+ops/backups/snapshots/
 
 # --- OS SPECIFIC ---
 .DS_Store
@@ -28,3 +30,7 @@ Thumbs.db
 .history/
 .vscode/
 .idea/
+
+# --- NODE (package.json is from Evolution API reference) ---
+node_modules/
+dist/
