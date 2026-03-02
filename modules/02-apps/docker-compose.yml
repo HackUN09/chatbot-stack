@@ -171,7 +171,7 @@ services:
       start_period: 15s
 
   app_n8n_editor:
-    image: docker.n8n.io/n8nio/n8n:1.76.1
+    image: docker.n8n.io/n8nio/n8n:latest
     container_name: app_n8n_editor
     restart: always
     env_file: ../../.env
