@@ -17,6 +17,7 @@ persistence/
 # --- LOGS & DIAGNOSTICS ---
 logs/
 *.log
+logs_evo.txt
 npm-debug.log*
 yarn-debug.log*
 diagnostic_*.txt

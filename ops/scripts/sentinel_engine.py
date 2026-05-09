@@ -99,6 +99,57 @@ def call_api(endpoint, payload=None, method='POST', max_retries=3):
                 return False, str(e)
             time.sleep(2 ** attempt)
 
+def call_chatwoot_api(endpoint, payload=None, method='GET'):
+    """Calls Chatwoot internal API using internal Docker hostname."""
+    base_url = "http://127.0.0.1:3000"
+    account_id = ENV.get('CHATWOOT_ACCOUNT_ID', '1')
+    token = ENV.get('CHATWOOT_GLOBAL_TOKEN', '')
+    if not token:
+        return False, "CHATWOOT_GLOBAL_TOKEN not set"
+
+    headers = {
+        "Content-Type": "application/json",
+        "api_access_token": token
+    }
+    url = f"{base_url}/api/v1/accounts/{account_id}{endpoint}"
+    payload_str = json.dumps(payload) if payload else None
+    data = payload_str.encode('utf-8') if payload_str else None
+
+    try:
+        req = urllib.request.Request(url, data=data, headers=headers, method=method)
+        with urllib.request.urlopen(req, timeout=10) as response:
+            return True, json.loads(response.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        return False, f"HTTP {e.code}: {e.read().decode('utf-8')}"
+    except Exception as e:
+        return False, str(e)
+
+def patch_webhook_internal(instance_name):
+    """
+    Patches the Chatwoot inbox webhook URL to use the internal Docker URL.
+    This eliminates the Cloudflare hairpinning timeout when Chatwoot sends
+    events back to Evolution API.
+    Bug fixed: 'Timed out reading data from server' in chatwoot-worker logs.
+    """
+    ok, resp = call_chatwoot_api("/inboxes", method="GET")
+    if not ok:
+        print(f"    [WARN] Could not fetch inboxes to patch webhook: {resp}")
+        return
+    for inbox in resp.get("payload", []):
+        if inbox.get("name") == instance_name:
+            inbox_id = inbox.get("id")
+            internal_url = f"http://app_evolution:8080/chatwoot/webhook/{instance_name}"
+            patch_ok, patch_resp = call_chatwoot_api(
+                f"/inboxes/{inbox_id}",
+                payload={"channel": {"webhook_url": internal_url}},
+                method="PATCH"
+            )
+            if patch_ok:
+                print(f"    [FIX] Webhook for '{instance_name}' patched to internal URL.")
+            else:
+                print(f"    [WARN] Webhook patch failed for '{instance_name}': {patch_resp}")
+            return
+
 def setup_s3():
     """Crea buckets en MinIO y aplica políticas de acceso público usando mc dentro del container."""
     print("  [S3] Configurando Buckets en MinIO...")
@@ -230,7 +281,7 @@ def setup_chatwoot():
 # --- [02] ACTIONS ---
 
 def prepare_chatwoot_db():
-    print("🛠️ [ CW_PREP ] Verificando Esquema de Base de Datos...")
+    print("[ CW_PREP ] Verificando Esquema de Base de Datos...")
 
     check_cmd = ["docker", "exec", "-e", "RUBYOPT=-W0", "chatwoot-web", "bin/rails", "runner",
                  "begin; puts User.count; rescue; puts 'MISSING_TABLES'; end"]
@@ -268,7 +319,7 @@ def prepare_chatwoot_db():
             print("    [ERROR] Fallo en migración.")
 
 def fix_evolution():
-    print("🧬 [ EVO_FIX ] Ejecutando Chequeo de Integridad...")
+    print("[ EVO_FIX ] Ejecutando Chequeo de Integridad...")
     if not check_service("Evolution API", url="http://localhost:8080/"):
         return
     
@@ -286,7 +337,8 @@ def fix_evolution():
         print("FAILED: Evolution API unavailable after retries.")
         return
 
-    # Auto-provision instance if none exist
+    # Process all instances found or create one if none exist
+    targets = []
     if not instances or len(instances) == 0:
         print("    [AUTO] No hay instancias activas. Creando 'Master-Bridge' automáticamente...")
         payload = {
@@ -297,47 +349,50 @@ def fix_evolution():
         ok_create, res_create = call_api("/instance/create", payload)
         if ok_create:
             print("    [OK] Instancia 'Master-Bridge' creada con éxito.")
-            target = "Master-Bridge"
+            targets.append("Master-Bridge")
         else:
             print(f"    [ERROR] No se pudo crear la instancia: {res_create}")
             return
     else:
-        # In Evolution v2, instanceName might be nested inside an 'instance' object or be just 'name'
-        first_instance = instances[0]
-        target = first_instance.get('name') or first_instance.get('instanceName') or first_instance.get('instance', {}).get('instanceName')
-        print(f"    [INFO] Active instance detected: {target}")
+        for inst in instances:
+            name = inst.get('name') or inst.get('instanceName') or inst.get('instance', {}).get('instanceName')
+            if name:
+                targets.append(name)
+        print(f"    [INFO] Detected {len(targets)} active instances.")
 
-    # Evolution v2.x Integration Mapping
-    chatwoot = {
-        "enabled": True, 
-        "accountId": str(ENV.get('CHATWOOT_ACCOUNT_ID', '1')),
-        "token": ENV.get('CHATWOOT_GLOBAL_TOKEN', '').strip(), 
-        "url": ENV.get('CHATWOOT_URL', "http://chatwoot:3000"),
-        "signMsg": True,
-        "reopenConversation": True,
-        "conversationPending": False,
-        "nameInbox": target,
-        "mergeBrazilContacts": True,
-        "importContacts": True,
-        "importMessages": True,
-        "daysLimitImportMessages": 60,
-        "signDelimiter": "\n",
-        "autoCreate": True,
-        "organization": "Sentinel Bot",
-        "logo": ""
-    }
-    
-    # Sync Chatwoot integration
-    cw_ok, cw_res = call_api(f"/chatwoot/set/{target}", chatwoot)
-    if not cw_ok:
-        print(f"    [ERROR] Sync failed for {target}: {cw_res}")
-        return
-    
-    print(f"    [OK] Bridge Evolution-Chatwoot ({target}): SINCRONIZADO")
+    for target in targets:
+        # Evolution v2.x Integration Mapping
+        chatwoot = {
+            "enabled": True, 
+            "accountId": str(ENV.get('CHATWOOT_ACCOUNT_ID', '1')),
+            "token": ENV.get('CHATWOOT_GLOBAL_TOKEN', '').strip(), 
+            "url": ENV.get('CHATWOOT_URL', "http://chatwoot-web:3000"),
+            "signMsg": True,
+            "reopenConversation": True,
+            "conversationPending": False,
+            "nameInbox": target,
+            "mergeBrazilContacts": True,
+            "importContacts": True,
+            "importMessages": True,
+            "daysLimitImportMessages": 60,
+            "signDelimiter": "\n",
+            "autoCreate": True,
+            "organization": "Sentinel Bot",
+            "logo": ""
+        }
+        
+        # Sync Chatwoot integration
+        cw_ok, cw_res = call_api(f"/chatwoot/set/{target}", chatwoot)
+        if not cw_ok:
+            print(f"    [ERROR] Sync failed for {target}: {cw_res}")
+        else:
+            print(f"    [OK] Bridge Evolution-Chatwoot ({target}): SINCRONIZADO")
+            # FIX: Patch webhook to internal Docker URL (eliminates hairpinning timeout)
+            patch_webhook_internal(target)
 
 # --- [03] HELPERS ---
 def check_service(name, url=None, cmd=None, retries=60):
-    print(f"⏳ [WAIT] Verificando {name}...")
+    print(f"[WAIT] Verificando {name}...")
     for i in range(retries):
         try:
             if url:
@@ -363,7 +418,7 @@ def check_service(name, url=None, cmd=None, retries=60):
     return False
 
 def fix_database():
-    print("🗄️ [ DB_FIX ] Verificando Consistencia de Usuarios...")
+    print("[ DB_FIX ] Verificando Consistencia de Usuarios...")
     
     # 1. Confirm DB is listening (Strict Check via Helper)
     if not check_service("Postgres Core", cmd=["docker", "exec", "db_core", "pg_isready", "-U", "root_admin", "-d", "postgres"]):
@@ -403,7 +458,7 @@ def fix_database():
             print(f"    [ERROR] No se pudo configurar {user}: {result.stderr.strip()}")
 
 def wait_for_ready():
-    print("⏳ [ WAIT ] Esperando a que TODOS los servicios estén listos (Healthcheck)...")
+    print("[ WAIT ] Esperando a que TODOS los servicios estén listos (Healthcheck)...")
     
     # Defines services and their health endpoints/commands
     services = [

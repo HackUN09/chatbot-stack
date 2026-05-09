@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resumen del Proyecto: Integración WhatsApp & Gmail</title>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #10b981;
+            --bg: #f8fafc;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: #334155;
+            line-height: 1.6;
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+
+        h1 {
+            color: var(--primary);
+            text-align: center;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 20px;
+            margin-top: 0;
+        }
+
+        h2 {
+            color: var(--secondary);
+            margin-top: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            padding: 20px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            border-left: 4px solid var(--secondary);
+        }
+
+        .step span {
+            font-size: 1.5rem;
+            margin-right: 20px;
+            margin-top: 2px;
+        }
+
+        .step h3 {
+            margin: 0 0 5px 0;
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .step p {
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .capabilities {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .cap-box {
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .cap-box h4 {
+            margin-top: 0;
+            color: #1e40af;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--primary);
+        }
+
+        tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        .price {
+            font-weight: bold;
+            color: #059669;
+        }
+
+        .badge {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>🤖 Resumen Técnico: Integración WhatsApp ↔ Gmail</h1>
+
+        <h2>⚡ 1. Arquitectura del Flujo (El Ensamble Táctico)</h2>
+        <p>Este sistema orquesta la conexión bidireccional entre WhatsApp y el cliente de correo, dotándolo del modelo
+            de lenguaje Gemini para entender el contexto y ejecutar herramientas de manera autónoma.</p>
+
+        <div class="step">
+            <span>🟢</span>
+            <div>
+                <h3>Evolution API (Capa de Ingreso)</h3>
+                <p>Intercepta el webhook entrante de Meta/WhatsApp. Genera un JSON pesado con el número emisor, marca de
+                    tiempo y el texto (o base64 en caso de media) y detiene el rebote (`fromMe: true`) para evitar loops
+                    infinitos.</p>
+            </div>
+        </div>
+        <div class="step">
+            <span>⚙️</span>
+            <div>
+                <h3>n8n (Carga de Memoria y Ruteo)</h3>
+                <p>N8n limpia el JSON entrante. Usa `MemoryBufferWindow` atado al número telefónico (`remoteJid`) como
+                    identificador único de sesión. Así, guarda un historial conversacional temporal (10 mensajes) para
+                    que el Agente entienda peticiones relacionadas a mensajes pasados.</p>
+            </div>
+        </div>
+        <div class="step">
+            <span>🧠</span>
+            <div>
+                <h3>Agente Gemini (Motor Lógico + Tools)</h3>
+                <p>El nodo principal de Langchain. Analiza el comando humano. Si el usuario saluda, ejecuta su *System
+                    Prompt* predefinido: interceptar Gmail para listar temas urgentes y los 5 correos más recientes,
+                    formateando la salida estrictamente a sintaxis de WhatsApp (negritas, cursivas y viñetas).</p>
+            </div>
+        </div>
+        <div class="step">
+            <span>✉️</span>
+            <div>
+                <h3>Gmail API (Capa de Acción)</h3>
+                <p>Herramientas ocultas bajo el control del Agente. N8n se autentica vía OAuth2 en Google Workspace.
+                    Devuelve al Agente la lectura en raw (`Get many messages`) y ofrece un punto final de escritura
+                    (`Send a message`) usando las variables inferidas por la IA (To, Subject, Message).</p>
+            </div>
+        </div>
+
+        <h2>🛠️ 2. ¿Qué puede hacer esta integración?</h2>
+        <div class="capabilities">
+            <div class="cap-box">
+                <h4>Lectura Proactiva Cero Clics</h4>
+                <p>El usuario manda "Hola", y el bot busca en Gmail, analiza asuntos/remitentes, filtra lo prioritario
+                    (urgente, facturas) y le dibuja un mapa mental en WhatsApp en 3 segundos.</p>
+            </div>
+            <div class="cap-box">
+                <h4>Redacción Automatizada por Comando</h4>
+                <p>El usuario dice: "Dile a Juan que la oferta cerró en 4 mil". Gemini saca el mail de Juan, redacta el
+                    asunto, el cuerpo formal del correo, y usa n8n para enviarlo inmediatamente.</p>
+            </div>
+            <div class="cap-box">
+                <h4>Interpretación de Hilos</h4>
+                <p>El bot no solo lee el último correo; el Agente puede resumir, a pedido formal del usuario en
+                    WhatsApp, hilos enteros de conversaciones largas de correo sin que el humano deba abrir la
+                    aplicación.</p>
+            </div>
+        </div>
+
+        <h2>🌍 3. Proyección de Infraestructura (VPS Hosting VPS Anual)</h2>
+        <p>Para levantar este servidor con contenedores Docker (n8n, Evolution, Redis, MinIO, PostgreSQL) de manera
+            robusta y permanente, estos son los costos de alquiler anual en el mercado (Requisito Mínimo Válido: <b>4GB
+                RAM, 2 vCPU</b>):</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Proveedor </th>
+                    <th>Especificaciones (Hardware)</th>
+                    <th>Costo Anual Proyectado</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><b>Hetzner</b><br><span class="badge">CX32</span></td>
+                    <td><b>4 vCPU / 8 GB RAM</b><br>80 GB SSD NVMe</td>
+                    <td class="price">~$91 USD / año</td>
+                </tr>
+                <tr>
+                    <td><b>Contabo</b><br><span class="badge">Cloud VPS 1</span></td>
+                    <td><b>4 vCPU / 6 GB RAM</b><br>400 GB SSD M.2</td>
+                    <td class="price">~$66 USD / año</td>
+                </tr>
+                <tr>
+                    <td><b>Hostinger</b><br><span class="badge">KVM 2</span></td>
+                    <td><b>2 vCPU / 8 GB RAM</b><br>100 GB NVMe (Incl. Backups)</td>
+                    <td class="price">~$83 USD / año</td>
+                </tr>
+                <tr>
+                    <td><b>DigitalOcean</b><br><span class="badge">Basic Droplet</span></td>
+                    <td><b>2 vCPU / 4 GB RAM</b><br>80 GB SSD Rápido</td>
+                    <td class="price">~$288 USD / año</td>
+                </tr>
+            </tbody>
+        </table>
+
+    </div>
+
+</body>
+
+</html>

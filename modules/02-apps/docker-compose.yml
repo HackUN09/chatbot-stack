@@ -18,7 +18,7 @@ services:
       STORAGE_BUCKET_NAME: ${CHATWOOT_BUCKET}
       STORAGE_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
       STORAGE_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
-      STORAGE_ENDPOINT: https://s3.${DOMAIN}
+      STORAGE_ENDPOINT: http://${S3_ENDPOINT}:${S3_PORT:-9000}
       STORAGE_CDN_HOST: https://s3.${DOMAIN}
       S3_PUBLIC_URL: https://s3.${DOMAIN}
       STORAGE_FORCE_PATH_STYLE: "true"
@@ -26,6 +26,8 @@ services:
       FORCE_SSL: "false"
       RAILS_SERVE_STATIC_FILES: "true"
       RAILS_LOG_TO_STDOUT: "true"
+      ALLOWED_HOSTS: "*"
+      SSRF_SAFE_LIST: "core_minio,chatwoot-web,evolution_audio_converter,app_evolution"
     command: |
       /bin/sh -c '
         bundle exec rails db:prepare &&
@@ -80,12 +82,14 @@ services:
       STORAGE_BUCKET_NAME: ${CHATWOOT_BUCKET}
       STORAGE_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
       STORAGE_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
-      STORAGE_ENDPOINT: https://s3.${DOMAIN}
+      STORAGE_ENDPOINT: http://${S3_ENDPOINT}:${S3_PORT:-9000}
       STORAGE_CDN_HOST: https://s3.${DOMAIN}
       S3_PUBLIC_URL: https://s3.${DOMAIN}
       STORAGE_FORCE_PATH_STYLE: "true"
       STORAGE_REGION: us-east-1
       FORCE_SSL: "false"
+      ALLOWED_HOSTS: "*"
+      SSRF_SAFE_LIST: "core_minio,chatwoot-web,evolution_audio_converter,app_evolution"
     command: bundle exec sidekiq -C config/sidekiq.yml
     volumes:
       - chatwoot_data:/app/storage
@@ -126,6 +130,9 @@ services:
       S3_REGION: us-east-1
       S3_FORCE_PATH_STYLE: "true"
       S3_USE_SSL: "false"
+      # Public URL used when Evolution references media files sent TO Chatwoot
+      # This MUST be the public CDN URL to bypass Chatwoot SSRF protection
+      S3_PUBLIC_URL: https://s3.${DOMAIN}
       CHATWOOT_ENABLED: "true"
       CHATWOOT_URL: ${CHATWOOT_URL}
       CHATWOOT_ACCOUNT_ID: ${CHATWOOT_ACCOUNT_ID}
@@ -164,11 +171,12 @@ services:
     networks:
       - secure-net
     healthcheck:
-      test: [ "CMD-SHELL", "wget -qO- http://localhost:4040 || exit 1" ]
+      # NOTE: GET / returns 404 (expected). We check TCP port is listening instead.
+      test: [ "CMD-SHELL", "nc -z localhost 4040 || exit 1" ]
       interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   app_n8n_editor:
     image: docker.n8n.io/n8nio/n8n:latest
@@ -187,6 +195,7 @@ services:
       DB_POSTGRESDB_DATABASE: n8n
       DB_POSTGRESDB_USER: n8n_user
       DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD}
+      N8N_PAYLOAD_SIZE_MAX: 100
       EXECUTIONS_DATA_MAX_AGE: 168
       EXECUTIONS_DATA_PRUNE: "true"
     volumes:

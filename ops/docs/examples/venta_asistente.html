@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tu Asistente de IA en WhatsApp</title>
+    <style>
+        :root {
+            --primary: #10B981;
+            /* Esmeralda/Verde WhatsApp */
+            --primary-dark: #059669;
+            --text-dark: #1E293B;
+            --text-light: #64748B;
+            --bg-light: #F8FAFC;
+            --white: #FFFFFF;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            color: var(--text-dark);
+            background-color: var(--bg-light);
+            line-height: 1.6;
+        }
+
+        .header {
+            background-color: var(--white);
+            padding: 20px 5%;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo span {
+            color: var(--primary);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 80px 5%;
+            text-align: center;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            color: var(--text-dark);
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-light);
+            max-width: 600px;
+            margin: 0 auto 40px auto;
+        }
+
+        /* Call to Action Buttons */
+        .cta-button {
+            display: inline-block;
+            background-color: var(--primary);
+            color: var(--white);
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
+        }
+
+        .cta-button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 80px 5%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 60px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+
+        .card {
+            background: var(--white);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+            text-align: center;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+        }
+
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
+            background-color: #f0fdf4;
+            color: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin: 0 auto 20px auto;
+        }
+
+        .card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .card p {
+            color: var(--text-light);
+        }
+
+        /* How it works */
+        .how-it-works {
+            background-color: var(--white);
+            padding: 80px 5%;
+        }
+
+        .steps-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 40px;
+            gap: 30px;
+        }
+
+        .step-number {
+            background-color: var(--primary);
+            color: var(--white);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .step-content p {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+        /* Integrations Showcase */
+        .integrations {
+            padding: 80px 5%;
+            text-align: center;
+            background: linear-gradient(to right, #1e293b, #0f172a);
+            color: white;
+        }
+
+        .integrations h2 {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        .integrations p {
+            color: #cbd5e1;
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto 40px auto;
+        }
+
+        .apps {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .app-badge {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .step {
+                flex-direction: column;
+                text-align: center;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">💬 Smart<span>Assist</span></div>
+        <a href="#contacto" class="cta-button" style="padding: 10px 20px; font-size: 0.9rem; box-shadow: none;">Probar
+            Ahora</a>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>Tu Secretaria Inteligente en el Bolsillo</h1>
+        <p>Imagina delegar tus correos urgentes, resumir documentos largos y coordinar tu agenda con un simple mensaje
+            de audio en WhatsApp. Sin apps nuevas. Sin complicaciones.</p>
+        <a href="#contacto" class="cta-button">Ver demostración gratis</a>
+    </section>
+
+    <!-- Integrations -->
+    <section class="integrations">
+        <h2>Conectamos tu mundo sin que te des cuenta</h2>
+        <p>Tu asistente vive en WhatsApp, pero tiene llaves para entrar (solo bajo tus órdenes) a tus herramientas de
+            trabajo diarias.</p>
+        <div class="apps">
+            <div class="app-badge">📱 WhatsApp</div>
+            <div class="app-badge">✉️ Gmail / Outlook</div>
+            <div class="app-badge">📂 Google Drive</div>
+            <div class="app-badge">📅 Calendarios</div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features">
+        <h2 class="section-title">¿Qué puedes pedirle?</h2>
+        <div class="grid">
+            <!-- Feature 1 -->
+            <div class="card">
+                <div class="icon-wrapper">📧</div>
+                <h3>Domina tu Correo</h3>
+                <p>"Revisa mi Gmail y dime si mi jefe me escribió hoy". El asistente entra, lee, y te resume en WhatsApp
+                    solo lo que importa, ahorrándote minutos valiosos navegando bandejas llenas de spam.</p>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="card">
+                <div class="icon-wrapper">📝</div>
+                <h3>Redacta por ti</h3>
+                <p>Envíale un audio: "Dile a Recursos Humanos que acepto la oferta de vacaciones para agosto". Él
+                    redactará un correo formal impecable y lo enviará en tu nombre al instante.</p>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="card">
+                <div class="icon-wrapper">🔍</div>
+                <h3>Lee documentos gigantes</h3>
+                <p>"Busca el último PDF que subí a Drive y resúmelo en 3 puntos, o dime de cuánto es la factura". Tu IA
+                    extrae la aguja del pajar mientras sigues en movimiento.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- How it Works -->
+    <section class="how-it-works">
+        <div class="steps-container">
+            <h2 class="section-title" style="margin-bottom: 40px; font-size: 2rem;">Todo ocurre de forma natural</h2>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Abres WhatsApp como siempre</h3>
+                    <p>No tienes que descargar aplicaciones extrañas, ni aprender interfaces complejas, ni recordar
+                        contraseñas de portales. Conversas con tu IA como si fuera un amigo más en tu lista de
+                        contactos.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Le pides lo que necesitas con lenguaje natural</h3>
+                    <p>No necesitas comandos de código. Hablas normal: "Oye, necesito agendar una cita con María para el
+                        jueves, ¿tengo libre a las 3pm?". La Inteligencia Artificial entiende tu intención (y tu tono).
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Él hace el trabajo aburrido por ti</h3>
+                    <p>En cuestión de segundos, la IA se conecta invisiblemente a tu Calendario, revisa tu
+                        disponibilidad, regresa a WhatsApp y te responde listo para armar el evento. Trabajas a la
+                        velocidad del rayo.</p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>© 2026 SmartAssist. Todo tu mundo a un mensaje de distancia.</p>
+    </footer>
+
+</body>
+
+</html>
